@@ -1,0 +1,12 @@
+# Private, uncommitted project instructions
+/CLAUDE.local.md
+
+# Instantiation smoke-test output
+/tmp/
+
+# Nix
+/result
+/result-*
+.direnv/
+
+.DS_Store
