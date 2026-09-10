@@ -74,24 +74,23 @@ their presence does not block the new line landing beside them.
 ## Stage 3 — chassis first, from the skeleton
 
 ```
-contrib/new-tool.sh <tool> --dir <path-to-worktree>
+toolsmith new <tool> --dir <path-to-worktree>
 ```
 
-`new-tool.sh` **refuses a target directory that already exists** — it is
-built to create a fresh worktree, not to write into one that is already
-there. That is the common case for a conversion: the tool being ported
-already has a repo. Point `--dir` at a directory that does not exist yet
-(a scratch path outside the target repo) and add `--no-git`, which skips
-the script's own `git init` and first commit — you do not want a second,
-disconnected history competing with the repo you are converting into.
-Then move the generated tree's contents into the existing repo by hand
-and let that repo's own history take the commit. This is the same
-scratch-then-move path the Makefile's `smoke` target uses to instantiate
-the skeleton without writing into the live tree
-(`rm -rf tmp/smoke && contrib/new-tool.sh smoke --dir tmp/smoke
---no-git`).
+The `new` verb **refuses a target directory that already exists** (exit
+3) — it is built to create a fresh worktree, not to write into one that
+is already there. That is the common case for a conversion: the tool
+being ported already has a repo. Point `--dir` at a directory that does
+not exist yet (a scratch path outside the target repo) and add
+`--no-git`, which skips the verb's own `git init` and first commit — you
+do not want a second, disconnected history competing with the repo you
+are converting into. Then move the generated tree's contents into the
+existing repo by hand and let that repo's own history take the commit.
+This is the same scratch-then-move path toolsmith's own `smoke` target
+uses to instantiate the skeleton without writing into the live tree
+(`toolsmith new smoke --dir tmp/smoke --no-git`).
 
-Then work the checklist the script prints. Two of its items are
+Then work the checklist the verb prints. Two of its items are
 judgment, not mechanics:
 
 - **`nix build` fails once and prints the real `vendorHash`.** Paste it
@@ -190,7 +189,7 @@ When it is time:
 
 The last step of every conversion:
 
-- run `contrib/check-contract <repo>` and clear the findings, or record
+- run `toolsmith check <repo>` and clear the findings, or record
   why a finding stands;
 - re-read CONTRACT.md against what you actually built, and fold each
   divergence back into the sidecar's decisions as an

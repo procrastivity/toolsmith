@@ -1,11 +1,10 @@
 # Parity divergences: `toolsmith check` and `toolsmith new`
 
-**Status:** normative for the parity window. The two oracles
-(`contrib/check-contract`, `contrib/new-tool.sh`) are still installed,
-and `make parity` still runs. When cutover deletes the oracles (migrate
-Stage 7), this document stops being normative and becomes history. Say
-so at the top rather than deleting it
-(`assets/playbook/port-spec.md`, "Life after cutover").
+**Status:** history. Cutover (`toolsmith-binary` Stage 7) deleted both
+oracles (`contrib/check-contract`, `contrib/new-tool.sh`) and the parity
+gate (`contrib/parity-check`); `make parity` no longer runs. This
+document no longer governs `toolsmith check` and `toolsmith new` — their
+own tests do.
 
 Matter: `toolsmith-binary`, Stage 4, Step 16. Companion to
 `docs/binary/port-spec.md`, whose §9 rules each of these calls. This
@@ -361,19 +360,19 @@ exists to test with.
 
 ## 5. At cutover
 
-`assets/playbook/parity-gate.md` §10 retires the gate in the same commit
-that deletes the oracles. This document survives that commit, with a
+`assets/playbook/parity-gate.md` §10 retired the gate in the same commit
+that deleted the oracles. This document survived that commit, with a
 status line saying it is history.
 
-Two entries have work attached to them at that point:
+Two entries had work attached to them at that point:
 
 - **R1** — `step-18` corrects the C6.2 label and closes the coverage
-  hole. Both changes are only safe once the gate no longer requires the
-  port to match the oracle.
-- **D3, D4** — the divergent exit codes and the defaulted path become
+  hole. Both changes are only safe now that the gate no longer requires
+  the port to match the oracle.
+- **D3, D4** — the divergent exit codes and the defaulted path became
   plain behavior, described by the tool's own tests rather than by a
   boundary drawn against an oracle.
 
-Everything else in §2 stays true after the oracles are gone, because
+Everything else in §2 stays true now that the oracles are gone, because
 each entry describes what the port does and why. The oracle's half
 becomes the historical note.

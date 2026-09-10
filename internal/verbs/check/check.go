@@ -1,9 +1,10 @@
 // Package check implements the `toolsmith check [path]` verb: a Go port
-// of contrib/check-contract (docs/binary/port-spec.md is the normative
-// spec this was ported against — cite it, not the shell, for anything
-// that isn't obvious from the code). It audits a tool repo against the
-// mechanical ([check]-marked) clauses of CONTRACT.md and reports findings
-// flat, exhaustively (T21) — every failing clause, never just the first.
+// of contrib/check-contract, retired at cutover (Stage 7 of
+// toolsmith-binary). docs/binary/port-spec.md records the script's
+// behavior — cite it, not the shell, for anything that isn't obvious
+// from the code. It audits a tool repo against the mechanical
+// ([check]-marked) clauses of CONTRACT.md and reports findings flat,
+// exhaustively (T21) — every failing clause, never just the first.
 // Exit 0 clean, 1 with findings, 2 usage.
 package check
 
@@ -22,11 +23,10 @@ import (
 // Command constructs the `toolsmith check [path]` verb. streams is the
 // writer pair threaded in at construction (C2.1).
 //
-// path defaults to "." when omitted — port spec §1, judgment call 2:
-// contrib/check-contract:13 requires exactly one positional argument, but
-// the Brief's verb table lists `check [path]` as optional. The parity
-// gate always passes an explicit path, so this never affects byte
-// parity; it only affects the CLI contract (port spec §8.1/§9).
+// path defaults to "." when omitted — port spec §1, judgment call 2: the
+// oracle requires exactly one positional argument (port spec §8.1), but
+// the Brief's verb table lists `check [path]` as optional.
+// TestCheck_DefaultPath (check_test.go) pins this behavior directly.
 // Everything else about the oracle's CLI contract holds: a path that does
 // not resolve to a directory exits 2.
 func Command(streams *iostreams.Streams) *cobra.Command {
@@ -44,25 +44,28 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 
 			info, err := os.Stat(path)
 			if err != nil || !info.IsDir() {
-				// contrib/check-contract:13 folds "wrong argument count"
-				// and "the one argument you gave isn't a directory" into
-				// one combined usage guard (port spec §5.1, §8.1); Cobra's
-				// Args already rejects the wrong-count case above this
-				// RunE, so what lands here is only the non-directory
-				// case. Returning a plain (non-toolsmitherr,
+				// The oracle folds "wrong argument count" and "the one
+				// argument you gave isn't a directory" into one combined
+				// usage guard (port spec §5.1, §8.1); Cobra's Args
+				// already rejects the wrong-count case above this RunE,
+				// so what lands here is only the non-directory case.
+				// Returning a plain (non-toolsmitherr,
 				// non-exitcode.Silent) error routes through Execute's
-				// Cobra-argument-parsing fallback, which exits 2 — the
-				// exit code is under parity, the message text is not
-				// (port spec §1, judgment call 2).
+				// Cobra-argument-parsing fallback, which exits 2,
+				// matching the oracle's usage exit code (port spec §1,
+				// judgment call 2). TestCheck_NotADirectory and
+				// TestGoldenCheckCLI pin the exit code; nothing pins the
+				// message text.
 				return fmt.Errorf("%q is not a directory", path)
 			}
 
-			// contrib/check-contract:17 resolves the argument to an
-			// absolute path with `repo="$(cd "$1" && pwd)"` before doing
-			// anything else, because that resolved path is itself part
-			// of the stdout/stderr payload (the clean-run line and the
-			// count-summary line both name it). filepath.Abs matches it
-			// for the ordinary, symlink-free case every corpus repo is.
+			// The oracle resolves the argument to an absolute path with
+			// `repo="$(cd "$1" && pwd)"` before doing anything else
+			// (port spec §2.1), because that resolved path is itself
+			// part of the stdout/stderr payload (the clean-run line and
+			// the count-summary line both name it). filepath.Abs matches
+			// it for the ordinary, symlink-free case every corpus repo
+			// is.
 			repo, err := filepath.Abs(path)
 			if err != nil {
 				return err

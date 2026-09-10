@@ -43,16 +43,16 @@ const (
 	envPlaceholder    = "TOOLNAME"
 )
 
-// namePattern is contrib/new-tool.sh:64's `^[a-z][a-z0-9]*$`. The shape is
-// load-bearing beyond taste: the name becomes Go package names, and it is
-// what makes the ASCII uppercase mapping for the env prefix total (port
-// spec §3.2).
+// namePattern is the oracle's name-shape check `^[a-z][a-z0-9]*$` (port
+// spec §4.2 step 2). The shape is load-bearing beyond taste: the name
+// becomes Go package names, and it is what makes the ASCII uppercase
+// mapping for the env prefix total (port spec §3.2).
 var namePattern = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
 
 // params is the validated parameter set, built once before any filesystem
-// mutation begins — the oracle validates everything (contrib/new-tool.sh
-// lines 63-77) before its first mkdir at line 79, and port spec §3.2 keeps
-// that order.
+// mutation begins — the oracle validates everything (port spec §4.2
+// steps 2-3) before its first mkdir (§4.2 step 4), and port spec §3.2
+// keeps that order.
 type params struct {
 	name string
 	// targetDir is kept exactly as the caller wrote it, never absolutized.
@@ -86,11 +86,10 @@ func validate(name, targetDir, module string, noGit bool) (params, error) {
 
 	if targetDir == "" {
 		// The oracle defaults to `<toolsmith-repo>/../<name>`, a sibling
-		// of the repository the script lives in (contrib/new-tool.sh:72).
-		// A binary has no repository to be a sibling of, so the port
-		// defaults to `<name>` under the current directory instead. The
-		// parity gate always passes --dir explicitly, so this is outside
-		// the parity contract; it is recorded as a divergence.
+		// of the repository the script lives in. A binary has no
+		// repository to be a sibling of, so the port defaults to
+		// `<name>` under the current directory instead. Recorded as D5
+		// in docs/binary/parity-divergences.md.
 		targetDir = name
 	}
 	if module == "" {
@@ -109,9 +108,9 @@ func validate(name, targetDir, module string, noGit bool) (params, error) {
 		name:      name,
 		targetDir: targetDir,
 		module:    module,
-		// contrib/new-tool.sh:77's `tr '[:lower:]' '[:upper:]'`. Total for
-		// this input because namePattern already confined name to ASCII
-		// lowercase and digits (port spec §3.2).
+		// the oracle's `tr '[:lower:]' '[:upper:]'` (port spec §4.2
+		// step 3). Total for this input because namePattern already
+		// confined name to ASCII lowercase and digits (port spec §3.2).
 		upperName: strings.ToUpper(name),
 		doGit:     !noGit,
 	}, nil
@@ -155,8 +154,8 @@ func instantiate(p params, skeleton fs.FS, embedded bool) error {
 }
 
 // destPath maps a skeleton-relative path to its path in the instantiated
-// tree. It encodes exactly the five renames contrib/new-tool.sh:82-89 and
-// :102-109 perform, and nothing more.
+// tree. It encodes exactly the five renames the oracle performs (port
+// spec §4.2 steps 5 and 7), and nothing more.
 //
 // A general "replace toolname anywhere in the path" rule would produce the
 // same answer for today's skeleton, because those are the only paths that
@@ -183,7 +182,7 @@ func destPath(rel, name string) string {
 }
 
 // substitute applies the oracle's three ordered replacements
-// (contrib/new-tool.sh:94-100, port spec §4.2 step 6).
+// (port spec §4.2 step 6).
 //
 // The order is load-bearing, not cosmetic. The module path contains the
 // bare placeholder as a substring, so running the bare replacement first
@@ -231,11 +230,12 @@ func destMode(skeleton fs.FS, rel string, data []byte, embedded bool) (os.FileMo
 	return 0o644, nil
 }
 
-// initGit reproduces contrib/new-tool.sh:111-115. Both of git's streams go
-// to stderr, never to the verb's stdout: the oracle lets git inherit the
-// script's stdout, but C2.1 makes stdout the verb's own, and -q means a
-// successful run writes nothing to either stream anyway. Port spec §5.2
-// already records that git's silence is not hermetically guaranteed.
+// initGit reproduces the oracle's git-init sequence (port spec §4.2
+// step 8). Both of git's streams go to stderr, never to the verb's
+// stdout: the oracle lets git inherit the script's stdout, but C2.1 makes
+// stdout the verb's own, and -q means a successful run writes nothing to
+// either stream anyway. Port spec §5.2 already records that git's
+// silence is not hermetically guaranteed.
 func initGit(p params, errOut *bytes.Buffer) error {
 	steps := [][]string{
 		{"init", "-q", "-b", "main"},
@@ -261,8 +261,8 @@ func internalErr(format string, args ...any) error {
 // skeletonTree resolves the skeleton subtree through the asset chain and
 // reports whether the embedded fallback answered. The oracle's equivalent
 // is a single `[[ -d "$repo/assets/_skeleton" ]]` against the repository it
-// lives in (contrib/new-tool.sh:69-70); a binary has no repository, so the
-// chain is what stands in for it (C5.1).
+// lives in (port spec §2.2); a binary has no repository, so the chain is
+// what stands in for it (C5.1, D6 in docs/binary/parity-divergences.md).
 func skeletonTree() (fs.FS, bool, error) {
 	tree, source, err := asset.Tree(skeletonPrefix)
 	if err != nil {

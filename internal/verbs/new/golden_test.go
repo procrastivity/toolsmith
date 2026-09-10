@@ -83,8 +83,8 @@ func repoRootDir() string {
 	return filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(file))))
 }
 
-// hermeticEnv builds the subprocess environment every golden and oracle
-// run in this package uses: the process environment with every seam
+// hermeticEnv builds the subprocess environment every golden-case
+// subprocess in this package uses: the process environment with every seam
 // variable stripped, then rebuilt so git never reads this host's config or
 // climbs out of the temp tree, and git identity is fixed rather than
 // inherited.

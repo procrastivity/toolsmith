@@ -40,11 +40,10 @@ func run(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
 	return out.String(), errBuf.String(), exitcode.Usage
 }
 
-// TestChecklistBytes pins the whole of new's stdout contract
-// (contrib/new-tool.sh:117-136, port spec §5.2) — the blank second line and
-// every line's indentation included. The target directory appears exactly
-// as it was passed, never absolutized, because the oracle prints $target_dir
-// unmodified.
+// TestChecklistBytes pins the whole of new's stdout contract (port spec
+// §5.2) — the blank second line and every line's indentation included.
+// The target directory appears exactly as it was passed, never
+// absolutized, because the oracle prints $target_dir unmodified.
 func TestChecklistBytes(t *testing.T) {
 	chdir(t, t.TempDir())
 
@@ -68,8 +67,7 @@ Checklist — the judgment steps the rename cannot do:
      one package each, every constructor ending in surface.Annotate.
   6. For a migration (not a fresh tool): follow toolsmith's
      assets/playbook/migrate.md — port spec, parity gate, cutover.
-  7. Run contrib/check-contract out/acme from the toolsmith repo and
-     clear any findings.
+  7. Run toolsmith check out/acme and clear any findings.
   8. Add the tool to toolsmith's TOOLS.md.
 `
 	if stdout != want {

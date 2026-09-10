@@ -28,7 +28,7 @@ namespace. Without it, a milestone tag like `phase-1` wins the describe
 and the binary stamps `phase-1-10-gabc1234` — a version that matches no
 release. The same pattern is `cliff.toml`'s `tag_pattern`, and the two
 must agree, because they answer the same question for different readers.
-`contrib/check-contract` compares them (C6.2).
+`toolsmith check` compares them (C6.2).
 
 **Nix stamps the commit; make stamps the tag.** That divergence is
 documented in `flake.nix` and deliberately not "fixed". Fixing it means

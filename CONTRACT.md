@@ -27,7 +27,7 @@ artifact generated from it.** The harness layer is not a thing you
 author. It is a thing the binary emits.
 
 Clauses are numbered for citation — from tool code comments, from
-`contrib/check-contract` findings, and from workplans. Sub-clauses
+`toolsmith check` findings, and from workplans. Sub-clauses
 marked **[check]** are mechanically verifiable.
 
 ---
@@ -124,7 +124,7 @@ marked **[check]** are mechanically verifiable.
   The install-state file a tool writes into a harness directory is the
   **stamp** (C4.4) — never "manifest" (T9; ste9 collided here first).
 - **C3.6** **[check]** The manifest declares the contract version it
-  conforms to: `"contract": "toolsmith/v1"` (T8). `contrib/check-contract`
+  conforms to: `"contract": "toolsmith/v1"` (T8). `toolsmith check`
   and TOOLS.md read conformance from the tool, not from memory.
 - **C3.7** Output schemas per verb are permitted (`OutputSchema`) but
   never filled speculatively.

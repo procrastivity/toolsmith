@@ -1,12 +1,12 @@
 # Port spec: `toolsmith check` and `toolsmith new`
 
-**Status:** normative. Both oracles below (`contrib/check-contract`,
-`contrib/new-tool.sh`) are still installed and authoritative; this spec
-describes their exact behavior so the Go verbs can be built without
-re-reading the shell. When the oracles are deleted at cutover (migrate
-Stage 7), this document stops being normative and becomes history — say
-so at the top rather than deleting it (`assets/playbook/port-spec.md`,
-"Life after cutover").
+**Status:** history. Cutover (`toolsmith-binary` Stage 7) deleted both
+oracles (`contrib/check-contract`, `contrib/new-tool.sh`) and the parity
+gate (`contrib/parity-check`). This document no longer governs
+`toolsmith check` and `toolsmith new` — their own tests do. Every
+`contrib/check-contract:N` and `contrib/new-tool.sh:N` line citation
+below refers to the scripts as of commit 641dc79. Read them with
+`git show 641dc79:contrib/check-contract` (or `:contrib/new-tool.sh`).
 
 Matter: `toolsmith-binary`, Stage 4 ("port the verbs, one at a time").
 Companion divergence list: `docs/binary/parity-divergences.md`,

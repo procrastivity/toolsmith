@@ -31,7 +31,7 @@ shape: the binary owns manifest, install, and doctor from day one.
 ## 2. Instantiate
 
 ```
-contrib/new-tool.sh <tool> --dir <path>
+toolsmith new <tool> --dir <path>
 ```
 
 Work the printed checklist. `nix build` fails once and prints the real
@@ -64,6 +64,6 @@ v1.0 is a release process debugged in public.
 ## 5. Register the tool
 
 Add a row to toolsmith's TOOLS.md with the contract version the manifest
-declares, and run `contrib/check-contract` against the repo. A fresh
+declares, and run `toolsmith check` against the repo. A fresh
 tool built from the skeleton should report no findings; anything it does
 report is either a real gap or a checker defect worth fixing here.

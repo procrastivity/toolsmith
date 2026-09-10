@@ -1,16 +1,17 @@
 // Package new implements the `toolsmith new <name>` verb: a Go port of
-// contrib/new-tool.sh (docs/binary/port-spec.md is the normative spec this
-// was ported against — cite it, not the shell, for anything that isn't
-// obvious from the code). It instantiates the shipped chassis skeleton as a
-// new tool: copy the tree, rename the placeholder paths, rewrite the three
-// placeholder spellings, restore the real module files, optionally make the
-// first commit, and print the checklist of judgment steps the rename cannot
-// do.
+// contrib/new-tool.sh, retired at cutover (Stage 7 of toolsmith-binary).
+// docs/binary/port-spec.md records the script's behavior — cite it, not
+// the shell, for anything that isn't obvious from the code. It
+// instantiates the shipped chassis skeleton as a new tool: copy the tree,
+// rename the placeholder paths, rewrite the three placeholder spellings,
+// restore the real module files, optionally make the first commit, and
+// print the checklist of judgment steps the rename cannot do.
 //
 // The verb's real output is the produced directory tree, not stdout — its
-// only stdout is the trailing checklist (port spec §5.2, §9.2). That is why
-// the parity contract for this verb is the tree plus the happy-path
-// checklist bytes plus exit 0, and why the gate diffs trees.
+// only stdout is the trailing checklist (port spec §5.2, §9.2).
+// golden_test.go's TestGoldenNew pins both: it diffs the produced tree
+// against a model built from the shipped skeleton (compareTrees) and pins
+// the checklist bytes against testdata/golden/new/.
 package new
 
 import (
@@ -32,8 +33,8 @@ import (
 // existing-target guard exits 3 as a refusal; every other failure exits 1.
 // The oracle's single exit code is an artifact of one die() helper with two
 // happy-path callers, and reproducing it would mean suppressing Cobra's
-// usage path to preserve an accident nobody observes. Failure-path exit
-// codes are excluded from this verb's parity contract accordingly.
+// usage path to preserve an accident nobody observed. This divergence is
+// recorded as D3 in docs/binary/parity-divergences.md.
 func Command(streams *iostreams.Streams) *cobra.Command {
 	var (
 		targetDir string
@@ -80,10 +81,11 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 		},
 	}
 
-	// The oracle's --dir default is a sibling of the toolsmith repository
-	// (contrib/new-tool.sh:72). A binary has no repository, so the default
-	// is resolved in validate() instead of being spelled here, and the
-	// help text says what it actually is.
+	// The oracle's --dir default is a sibling of the toolsmith repository.
+	// A binary has no repository, so the default is resolved in
+	// validate() instead of being spelled here, and the help text says
+	// what it actually is. Recorded as D5 in
+	// docs/binary/parity-divergences.md.
 	cmd.Flags().StringVar(&targetDir, "dir", "", "where to create the tool (default: ./<name>)")
 	cmd.Flags().StringVar(&module, "module", "", "Go module path (default: github.com/procrastivity/<name>)")
 	cmd.Flags().BoolVar(&noGit, "no-git", false, "skip git init and the first commit")
@@ -92,16 +94,11 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 	return cmd
 }
 
-// checklist is the verb's entire stdout contract, byte for byte
-// (contrib/new-tool.sh:117-136, transcribed in port spec §5.2). Three
-// values interpolate — the name, the target directory as the caller wrote
-// it, and the module — and every other byte is literal, the blank line
-// after the first line included.
-//
-// Item 7 still names contrib/check-contract rather than `toolsmith check`.
-// That is correct for now and deliberate: the oracle owns these bytes for
-// the duration of the parity window, and the wording changes at cutover
-// (Stage 7), when the oracle it names is deleted.
+// checklist is the verb's entire stdout contract, byte for byte (port
+// spec §4.2 step 9, transcribed in §5.2). Three values interpolate — the
+// name, the target directory as the caller wrote it, and the module —
+// and every other byte is literal, the blank line after the first line
+// included.
 func checklist(p params) string {
 	return fmt.Sprintf(`instantiated %s at %s (module %s)
 
@@ -118,8 +115,7 @@ Checklist — the judgment steps the rename cannot do:
      one package each, every constructor ending in surface.Annotate.
   6. For a migration (not a fresh tool): follow toolsmith's
      assets/playbook/migrate.md — port spec, parity gate, cutover.
-  7. Run contrib/check-contract %s from the toolsmith repo and
-     clear any findings.
+  7. Run toolsmith check %s and clear any findings.
   8. Add the tool to toolsmith's TOOLS.md.
 `, p.name, p.targetDir, p.module, p.name, p.targetDir, p.targetDir)
 }

@@ -13,7 +13,6 @@ Checklist — the judgment steps the rename cannot do:
      one package each, every constructor ending in surface.Annotate.
   6. For a migration (not a fresh tool): follow toolsmith's
      assets/playbook/migrate.md — port spec, parity gate, cutover.
-  7. Run contrib/check-contract acme from the toolsmith repo and
-     clear any findings.
+  7. Run toolsmith check acme and clear any findings.
   8. Add the tool to toolsmith's TOOLS.md.
 exit=0

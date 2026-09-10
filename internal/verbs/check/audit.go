@@ -98,11 +98,11 @@ func (a *auditor) read(rel string) []byte {
 	return data
 }
 
-// toolName reproduces contrib/check-contract:28-38. Exactly one cmd/
-// entry names the tool silently; two or more picks the alphabetically
-// first (after sort) and notes the rest to stderr; zero (cmd/ missing, or
-// present but empty — indistinguishable) leaves the tool name empty and
-// raises C1.2.
+// toolName reproduces the oracle's tool-name discovery (port spec §4.1
+// step 1). Exactly one cmd/ entry names the tool silently; two or more
+// picks the alphabetically first (after sort) and notes the rest to
+// stderr; zero (cmd/ missing, or present but empty — indistinguishable)
+// leaves the tool name empty and raises C1.2.
 func (a *auditor) toolName() string {
 	var cmds []string
 	if a.isDir("cmd") {
@@ -140,16 +140,16 @@ func (a *auditor) toolName() string {
 	return tool
 }
 
-// cgoFlakePattern is contrib/check-contract:47's
-// `CGO_ENABLED *= *0|env\.CGO_ENABLED *= *0`.
+// cgoFlakePattern is the oracle's C1.1 flake pattern
+// `CGO_ENABLED *= *0|env\.CGO_ENABLED *= *0` (port spec §4.1 step 2).
 var cgoFlakePattern = regexp.MustCompile(`CGO_ENABLED *= *0|env\.CGO_ENABLED *= *0`)
 
-// cgoEnabled reproduces contrib/check-contract:40-48. Two independent
-// sub-checks: Makefile (missing file is its own finding; present but
-// lacking the string is a different one), then, only if flake.nix
-// exists, its CGO_ENABLED pattern. A missing flake.nix produces no C1.1
-// finding at all here — that gap is covered, under a different clause
-// label, by flakeAndEnvrc below (§4.1 step 2/3).
+// cgoEnabled reproduces the oracle's C1.1 checks (port spec §4.1 step 2).
+// Two independent sub-checks: Makefile (missing file is its own finding;
+// present but lacking the string is a different one), then, only if
+// flake.nix exists, its CGO_ENABLED pattern. A missing flake.nix produces
+// no C1.1 finding at all here — that gap is covered, under a different
+// clause label, by flakeAndEnvrc below (§4.1 step 2/3).
 func (a *auditor) cgoEnabled() {
 	if a.isFile("Makefile") {
 		if !bytes.Contains(a.read("Makefile"), []byte("CGO_ENABLED=0")) {
@@ -165,10 +165,11 @@ func (a *auditor) cgoEnabled() {
 	}
 }
 
-// flakeAndEnvrc reproduces contrib/check-contract:50-59. flake.nix's
-// existence is checked again here, this time with an else — "no
-// flake.nix" is a C1.6 finding, not C1.1. The postInstall/share/
-// sub-check only runs when both flake.nix and an assets/ dir exist.
+// flakeAndEnvrc reproduces the oracle's C1.6 checks (port spec §4.1
+// step 3). flake.nix's existence is checked again here, this time with
+// an else — "no flake.nix" is a C1.6 finding, not C1.1. The
+// postInstall/share/ sub-check only runs when both flake.nix and an
+// assets/ dir exist.
 func (a *auditor) flakeAndEnvrc() {
 	hasFlake := a.isFile("flake.nix")
 	if !hasFlake {
@@ -188,7 +189,7 @@ func (a *auditor) flakeAndEnvrc() {
 	}
 }
 
-// forbidigo reproduces contrib/check-contract:61-67.
+// forbidigo reproduces the oracle's C2.1 checks (port spec §4.1 step 4).
 func (a *auditor) forbidigo() {
 	if !a.isFile(".golangci.yml") {
 		a.find("C2.1", "no .golangci.yml")
@@ -211,12 +212,12 @@ func (a *auditor) forbidigo() {
 	}
 }
 
-// manifestVerb reproduces contrib/check-contract:69-81. Guarded on a
-// non-empty tool name, `go` on PATH, and go.mod present; any failure of
-// that guard, or a non-zero exit from the manifest run itself, collapses
-// to the single C3.1 finding the oracle can't further distinguish (port
-// spec §4.1 step 1, §6). On a successful run, checkManifestDoc applies
-// the C3.1/C3.4/C3.6 field checks (§9.1).
+// manifestVerb reproduces the oracle's C3.1/C3.4/C3.6 checks (port spec
+// §4.1 step 5). Guarded on a non-empty tool name, `go` on PATH, and
+// go.mod present; any failure of that guard, or a non-zero exit from the
+// manifest run itself, collapses to the single C3.1 finding the oracle
+// can't further distinguish (port spec §4.1 step 1, §6). On a successful
+// run, checkManifestDoc applies the C3.1/C3.4/C3.6 field checks (§9.1).
 func (a *auditor) manifestVerb(tool string) {
 	if tool == "" || !goAvailable() || !a.isFile("go.mod") {
 		a.find("C3.1", "cannot run the manifest verb (need go, go.mod, and cmd/<tool>)")
@@ -237,7 +238,7 @@ func goAvailable() bool {
 
 // runManifestJSON runs `go run ./cmd/<tool> manifest --json` with the
 // audited repo as the working directory and CGO_ENABLED=0 forced in the
-// environment (contrib/check-contract:72, port spec §6), discarding the
+// environment (port spec §6), discarding the
 // child's stderr exactly as the oracle's `2>/dev/null` does — a crash, a
 // compile failure, and "go isn't on PATH but go.mod exists" all surface
 // identically to the caller as a non-nil error.
@@ -290,25 +291,28 @@ func checkManifestDoc(raw []byte) []Finding {
 	return findings
 }
 
-// cliffTagPattern is contrib/check-contract:86's
-// `tag_pattern *= *"v\[0-9\]\*"` (a BRE where every metacharacter around
-// the literal "[0-9]*" is escaped to match it literally; only the
-// surrounding " *" runs of spaces are genuinely variable-width).
+// cliffTagPattern is the oracle's C6.2 tag pattern
+// `tag_pattern *= *"v\[0-9\]\*"` (port spec §4.1 step 6; a BRE where
+// every metacharacter around the literal "[0-9]*" is escaped to match it
+// literally; only the surrounding " *" runs of spaces are genuinely
+// variable-width).
 var cliffTagPattern = regexp.MustCompile(`tag_pattern *= *"v\[0-9\]\*"`)
 
-// tagNamespace reproduces contrib/check-contract:83-89, the mislabel and
-// coverage hole included.
+// tagNamespace reproduces the oracle's C6.2/C6.3 checks (port spec §4.1
+// step 6), the mislabel and coverage hole included.
 //
-// port spec, §9.6: the else branch below is reproduced on purpose for
-// the duration of the parity window (ruled in port-spec.md §1 item 1,
-// §9.6) — it is scheduled for correction after cutover; do not "fix" it
-// here. Two consequences of the oracle's guard being `Makefile &&
-// cliff.toml` while its else only re-tests cliff.toml: a repo with a
-// Makefile and no cliff.toml reports the real C6.2 condition under the
-// C6.3 label (mislabel, repro A); a repo with a cliff.toml and no
-// Makefile reports nothing from this whole block, so the C6.2
-// --match/tag_pattern agreement goes silently unaudited (coverage hole,
-// repro B) — has_file cliff.toml is true, so find_it is never reached.
+// This is still the oracle's behavior (port spec §9.6, parity-divergences.md
+// R1), pinned by the probe-c62-mislabel and probe-c62-hole goldens
+// (internal/verbs/check/golden_test.go, testdata/golden/check/). Two
+// consequences of the oracle's guard being `Makefile && cliff.toml` while
+// its else only re-tests cliff.toml: a repo with a Makefile and no
+// cliff.toml reports the real C6.2 condition under the C6.3 label
+// (mislabel, repro A); a repo with a cliff.toml and no Makefile reports
+// nothing from this whole block, so the C6.2 --match/tag_pattern
+// agreement goes silently unaudited (coverage hole, repro B) — has_file
+// cliff.toml is true, so find_it is never reached. Correcting the label
+// and closing the hole is a deliberate output change: it updates both
+// goldens above and the R1 entry in docs/binary/parity-divergences.md.
 func (a *auditor) tagNamespace() {
 	hasMakefile := a.isFile("Makefile")
 	hasCliff := a.isFile("cliff.toml")
@@ -326,8 +330,9 @@ func (a *auditor) tagNamespace() {
 	}
 }
 
-// changelogTracked reproduces contrib/check-contract:91-96. It only runs
-// inside a git working tree; a non-git directory skips it silently,
+// changelogTracked reproduces the oracle's C6.3 CHANGELOG.md check (port
+// spec §4.1 step 7). It only runs inside a git working tree; a non-git
+// directory skips it silently,
 // exactly like `git -C "$repo" rev-parse --git-dir` gates the oracle's
 // version. A missing git binary, or any other failure of either
 // subprocess, is folded into "skip silently" the same way — the oracle
@@ -345,21 +350,22 @@ func (a *auditor) changelogTracked() {
 	}
 }
 
-// usesLinePattern is contrib/check-contract:107's
-// `^\s*-? *uses:` filter: leading whitespace, an optional single dash,
-// more spaces, then the literal "uses:" immediately. A '#' anywhere in
-// that prefix (a commented-out uses: line) breaks the match, so that
-// line is never seen at all — neither flagged nor exempted, just never
-// reached (port spec §7).
+// usesLinePattern is the oracle's C6.5 uses-line filter
+// `^\s*-? *uses:` (port spec §4.1 step 8): leading whitespace, an
+// optional single dash, more spaces, then the literal "uses:"
+// immediately. A '#' anywhere in that prefix (a commented-out uses:
+// line) breaks the match, so that line is never seen at all — neither
+// flagged nor exempted, just never reached (port spec §7).
 var usesLinePattern = regexp.MustCompile(`^\s*-? *uses:`)
 
 // shaPattern is the 40-hex-character full-SHA test each stripped ref is
-// checked against (contrib/check-contract:106).
+// checked against (port spec §4.1 step 8).
 var shaPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
-// workflows reproduces contrib/check-contract:98-111: `for wf in ci.yml
-// release.yml`, in that order, each independently checked for
-// nix-develop framing and then walked line-by-line for SHA-pinning.
+// workflows reproduces the oracle's C6.5 workflow checks (port spec §4.1
+// step 8): `for wf in ci.yml release.yml`, in that order, each
+// independently checked for nix-develop framing and then walked
+// line-by-line for SHA-pinning.
 func (a *auditor) workflows() {
 	for _, wf := range []string{"ci.yml", "release.yml"} {
 		rel := filepath.Join(".github", "workflows", wf)
@@ -375,8 +381,8 @@ func (a *auditor) workflows() {
 	}
 }
 
-// shaPinFindings reproduces contrib/check-contract:102-107's per-line
-// string surgery over every uses: line (port spec §7):
+// shaPinFindings reproduces the oracle's per-line string surgery over
+// every uses: line (port spec §4.1 step 8, §7):
 //   - ref is the text after the LAST '@' in the line — unchanged if no
 //     '@' is present at all (`${line##*@}` returns its operand
 //     untouched when the pattern doesn't match, so an unpinned local
@@ -421,11 +427,13 @@ func shaPinFindings(wf string, data []byte) []Finding {
 	return findings
 }
 
-// hooksTargetPattern is contrib/check-contract:120's `^hooks:`, matched
-// against any line in the Makefile (grep -E, no -x — multiline anchors).
+// hooksTargetPattern is the oracle's C6.6 hooks-target pattern
+// `^hooks:` (port spec §4.1 step 9), matched against any line in the
+// Makefile (grep -E, no -x — multiline anchors).
 var hooksTargetPattern = regexp.MustCompile(`(?m)^hooks:`)
 
-// conventionalCommits reproduces contrib/check-contract:113-122.
+// conventionalCommits reproduces the oracle's C6.6 checks (port spec
+// §4.1 step 9).
 //
 // The final sub-check is gated on the Makefile containing a `^hooks:`
 // line, but the `--hook-type commit-msg` grep it guards then searches
@@ -453,9 +461,10 @@ func (a *auditor) conventionalCommits() {
 	}
 }
 
-// golangciSchema reproduces contrib/check-contract:124-128. Only runs if
-// .golangci.yml exists — already established by forbidigo above, but
-// re-checked here exactly as the oracle re-checks it.
+// golangciSchema reproduces the oracle's C6.7 checks (port spec §4.1
+// step 10). Only runs if .golangci.yml exists — already established by
+// forbidigo above, but re-checked here exactly as the oracle re-checks
+// it.
 func (a *auditor) golangciSchema() {
 	if !a.isFile(".golangci.yml") {
 		return
@@ -469,7 +478,8 @@ func (a *auditor) golangciSchema() {
 	}
 }
 
-// readme reproduces contrib/check-contract:130-131.
+// readme reproduces the oracle's C7.5 README check (port spec §4.1
+// step 11).
 func (a *auditor) readme() {
 	if !a.isFile("README.md") {
 		a.find("C7.5", "no README.md")

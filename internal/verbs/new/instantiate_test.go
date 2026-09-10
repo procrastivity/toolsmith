@@ -91,9 +91,9 @@ func TestValidateOrderAndCodes(t *testing.T) {
 }
 
 // TestValidateResolvesDefaultsBeforeRefusing is the ordering the oracle's
-// line 72/73 pair encodes: --dir defaults are applied first, so a caller
-// who omits --dir gets the same refusal as one who passed the same path
-// explicitly.
+// default-resolution/existence-check pair encodes (port spec §4.2
+// step 2): --dir defaults are applied first, so a caller who omits --dir
+// gets the same refusal as one who passed the same path explicitly.
 func TestValidateResolvesDefaultsBeforeRefusing(t *testing.T) {
 	dir := t.TempDir()
 	chdir(t, dir)

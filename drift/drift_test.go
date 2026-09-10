@@ -1,11 +1,12 @@
 // Package drift gates toolsmith's own chassis against the copy of it that
-// contrib/new-tool.sh ships to every new tool. T2 says tools share the
+// `toolsmith new` ships to every new tool. T2 says tools share the
 // contract, not a library, so the chassis is copied per tool; T4 says the
 // skeleton is a compiling Go module using toolname / TOOLNAME /
-// toolnameerr as placeholders for that chassis. contrib/new-tool.sh is the
-// source of truth for the substitution that instantiates it: toolname for
-// toolsmith, TOOLNAME for TOOLSMITH, plus the module path and the two
-// toolnameerr renames those two spellings already cover.
+// toolnameerr as placeholders for that chassis.
+// internal/verbs/new/instantiate.go's substitute is the source of truth
+// for the substitution that instantiates it: toolname for toolsmith,
+// TOOLNAME for TOOLSMITH, plus the module path and the two toolnameerr
+// renames those two spellings already cover.
 //
 // Two gates, same shape, run by compareTrees:
 //   - TestChassisMatchesSkeleton compares internal/ against
@@ -49,8 +50,9 @@
 // automatically.
 //
 // Path mapping. Every toolsmith path is run through substitute (reversing
-// contrib/new-tool.sh's own substitution) to land in the skeleton's
-// namespace, and — top-level paths only — through tmplRenames, which
+// the `new` verb's own substitution — internal/verbs/new/instantiate.go's
+// substitute) to land in the skeleton's namespace, and — top-level paths
+// only — through tmplRenames, which
 // mirrors destPath in internal/verbs/new/instantiate.go: go.mod and
 // go.sum are go.mod.tmpl and go.sum.tmpl in the skeleton, because a
 // directory containing a real go.mod cannot be embedded (the
@@ -144,17 +146,17 @@ func loadTree(t *testing.T, root string) map[string]string {
 	return out
 }
 
-// substitute applies contrib/new-tool.sh's own two placeholder spellings in
-// reverse: toolname for toolsmith, TOOLNAME for TOOLSMITH. new-tool.sh also
-// substitutes the module path first, but github.com/procrastivity/toolname
-// contains "toolname" as a segment, so the plain lowercase pass already
-// covers it; there is nothing left for a separate module-path pass to do.
-// The script uses exactly these two spellings and no others (its own
-// comment: "the skeleton uses exactly three placeholder spellings —
-// toolname..., TOOLNAME..., and nothing else" once the module path is
-// folded in), so a third, mixed-case "Toolsmith" is never substituted by
-// new-tool.sh either — and toolsmith's tree only ever uses that spelling
-// inside internal/verbs/new (exempted below as toolsmith-only), so it never
+// substitute applies the reverse of the `new` verb's own two placeholder
+// spellings (internal/verbs/new/instantiate.go's substitute): toolname
+// for toolsmith, TOOLNAME for TOOLSMITH. The verb also substitutes the
+// module path first, but github.com/procrastivity/toolname contains
+// "toolname" as a segment, so the plain lowercase pass already covers
+// it; there is nothing left for a separate module-path pass to do. The
+// verb's placeholder constants name exactly three spellings — the module
+// path, toolname and TOOLNAME — and the module path folds into toolname,
+// so a mixed-case "Toolsmith" is never substituted by the verb either —
+// and toolsmith's tree only ever uses that spelling inside
+// internal/verbs/new (exempted below as toolsmith-only), so it never
 // reaches this comparison.
 func substitute(s string) string {
 	s = strings.ReplaceAll(s, "toolsmith", "toolname")
@@ -399,7 +401,7 @@ var internalTextExemptions = []textExemption{
 		path:        "cli/root.go",
 		present:     "\t\tShort: \"toolname — instantiate the chassis, audit a tool against the contract, carry the migration playbook\",\n",
 		replacement: "\t\tShort: \"toolname — TODO: one line on what this tool is\",\n",
-		reason:      "placeholder: new-tool.sh's own checklist names \"root Short\" as a marker to fill; same class as skillDescription",
+		reason:      "placeholder: toolsmith new's own checklist names \"root Short\" as a marker to fill; same class as skillDescription",
 	},
 	{
 		path:        "harness/registry/registry.go",
@@ -448,11 +450,8 @@ var rootPathExemptions = []pathExemption{
 	{prefix: "docs/binary/", reason: "the toolsmith-binary Matter's port spec and divergences (C7.2); a tool writes its own"},
 	{prefix: "evidence/", reason: "toolsmith's own verification records (C7.3); the skeleton ships no evidence"},
 	{prefix: "drift/", reason: "this gate; it compares toolsmith against the skeleton and has no meaning inside a generated tool"},
-	{prefix: "contrib/check-contract", reason: "the check verb's oracle; toolsmith-only, deleted at cutover"},
-	{prefix: "contrib/new-tool.sh", reason: "the new verb's oracle; toolsmith-only, deleted at cutover"},
-	{prefix: "contrib/parity-check", reason: "the parity gate between toolsmith's verbs and their oracles; toolsmith-only, deleted at cutover"},
 	{prefix: "flake.lock", reason: "per-repo nix lock; the skeleton ships none so each tool resolves nixpkgs when it is created instead of inheriting toolsmith's pin"},
-	{prefix: "toolname.mk", reason: "toolsmith.mk (substituted key): the make targets only toolsmith needs (smoke, parity) and its extra shellcheck inputs, split out so Makefile stays a pure substitution"},
+	{prefix: "toolname.mk", reason: "toolsmith.mk (substituted key): the make target only toolsmith needs (smoke), split out so Makefile stays a pure substitution"},
 }
 
 var rootExcludedPairs = []excludedPair{

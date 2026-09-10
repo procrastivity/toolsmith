@@ -37,7 +37,7 @@ clauses the conformance checker and tool code comments cite.
   conversion.
 - **Bootstrapping something new** — no legacy, no parity oracle. Go
   straight to [assets/playbook/bootstrap.md](assets/playbook/bootstrap.md) and
-  `contrib/new-tool.sh`.
+  `toolsmith new`.
 
 ## What is in here
 
@@ -49,8 +49,7 @@ clauses the conformance checker and tool code comments cite.
 | [assets/playbook/](assets/playbook/) | Intake, migrate, bootstrap, port-spec, parity-gate, new-harness-target, release-and-hygiene. |
 | [assets/handoff-kit/](assets/handoff-kit/) | Templates for running a conversion as its own planning sidecar (HANDOFF, seed cards, workplans) — the wip-reboot process, productized. |
 | [assets/_skeleton/](assets/_skeleton/) | A compiling Go module with `toolname` placeholders: the chassis, manifest, one worked harness target, release tooling, CI, hygiene. |
-| [contrib/new-tool.sh](contrib/new-tool.sh) | Instantiates the skeleton: copy + mechanical rename + first commit + checklist. |
-| [contrib/check-contract](contrib/check-contract) | Audits any tool repo against the contract's mechanical clauses; findings by clause ID. |
+| [cmd/toolsmith](cmd/toolsmith) | The binary: its `new` verb instantiates the skeleton, its `check` verb audits a repo against the contract's mechanical clauses. |
 | [backport/](backport/) | Punch lists of fixes flowing back into existing tools (wip first). |
 | [evidence/](evidence/) | Conformance runs and skeleton smoke-test records. |
 
@@ -60,15 +59,16 @@ clauses the conformance checker and tool code comments cite.
 nix develop            # or direnv allow
 make check             # shellcheck + instantiate the skeleton and build/test it
 make hooks             # pre-commit, both stages
+make build             # bin/toolsmith
 
-contrib/new-tool.sh clast --dir ~/Code/clast-go
-contrib/check-contract ~/Code/wip
+bin/toolsmith new clast --dir ~/Code/clast-go
+bin/toolsmith check ~/Code/wip
 ```
 
 A conversion normally runs as an agent-seeded session: create a sidecar
 planning repo from [assets/handoff-kit/](assets/handoff-kit/), seed the session with
 CONTRACT.md + the playbook page for your entry mode + the handoff, and
-let the workplans drive. The skeleton and scripts do the mechanical
+let the workplans drive. The skeleton and binary do the mechanical
 part either way.
 
 ## Evolving the conventions
