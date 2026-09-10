@@ -46,6 +46,19 @@ assertions this Matter's workplan layers on top of parity-gate §1
 self-determinism across three runs per case. Both apply to `check` and
 `new` alike.
 
+**The rule the rulings follow.** Three of the calls below, and §9.7,
+divide the same way. **Reproduce an accident that mislabels; diverge from
+an accident that misreports conformance.** A wrong clause label or a
+silent coverage gap still leaves the reader a true statement about the
+repo, and reproducing it is cheap, so the oracle stays fixed and the
+correction is scheduled (§9.6). A false finding tells the reader a
+conformant repo is non-conformant, and byte-reproducing it would harden
+the defect into the tool that replaces the oracle, so the port is
+corrected and the parity contract narrows to exclude the inputs that
+trip it (§9.1, §9.7). Exit codes are a third case: they carry no
+message at all, so the contract's table wins wherever no consumer
+observes the oracle's (§9.3).
+
 **Judgment calls made while writing this spec**, each expanded where
 cited:
 
@@ -637,6 +650,36 @@ reproduces both for the duration of the parity window, per §1. The
 correction is scheduled, not deferred indefinitely: a Stage 8 item plus a
 `docs/binary/parity-divergences.md` entry, applied after cutover retires
 the gate.
+**9.7 — CRLF workflow files: the oracle reports a false C6.5.** Found by
+review at Step 13, measured against both implementations. The oracle
+reads each `uses:` line with `while IFS= read -r line` over `grep`
+output (`contrib/check-contract:107`), which keeps a trailing carriage
+return. It then extracts the ref with `${line##*@}` and tests it against
+`^[0-9a-f]{40}$` (`contrib/check-contract:106`). On a CRLF-terminated
+workflow file the ref is `<40 hex chars>\r`, which fails the test, so a
+**correctly SHA-pinned action is reported as not SHA-pinned**. The same
+`\r` also rides along in the message text of every real finding from
+that file.
+
+**Repro**: write `.github/workflows/ci.yml` with CRLF line endings and a
+genuinely pinned `- uses: actions/checkout@11bd7190…683` line. The
+oracle emits `C6.5: ci.yml: action not SHA-pinned: - uses:
+actions/checkout@11bd7190…683<CR>`; the port emits nothing for that
+line.
+
+**Ruling: diverge**, by the rule in §1. This is a false finding of
+exactly §9.1's kind — a formatting artifact of the input turned into a
+conformance verdict — not §9.6's kind, where the reported condition is
+real and only its label is wrong. The port strips the carriage return
+before matching, so a pinned action reads as pinned whatever the file's
+line endings are, and finding messages carry no stray `\r`. The parity
+contract narrows accordingly: **workflow files with CRLF line endings
+are outside it**, alongside the pretty-printed manifests of §9.1.
+
+`assets/playbook/parity-gate.md` §3 names CRLF as a required generated
+probe, so the gate built at Step 14 must carry this exclusion explicitly
+rather than discovering it as a failure.
+
 ---
 
 ## 10. Verification
@@ -661,7 +704,9 @@ follows; anything not listed is a gap the gate does not reach.
   the "Makefile missing, cliff.toml present → silently zero findings" gap
   ever fires; the §9.1
   pretty-printed-manifest exclusion — none of the corpus repos' manifest
-  verbs pretty-print; the §9.4 exit-0-with-stderr tension — no corpus
+  verbs pretty-print; the §9.7 CRLF exclusion — every corpus workflow
+  file is LF-terminated, and parity-gate §3 requires a CRLF probe that
+  must be generated with the exclusion already encoded; the §9.4 exit-0-with-stderr tension — no corpus
   repo has 2+ `cmd/` entries; the §7 `set -e`-abort paths (a
   permission-denied repo directory, a disk-full mid-`new`) — these are
   fault-injection cases, outside what a fixed corpus of real repos can

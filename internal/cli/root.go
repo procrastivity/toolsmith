@@ -10,6 +10,7 @@ import (
 	"github.com/procrastivity/toolsmith/internal/buildinfo"
 	"github.com/procrastivity/toolsmith/internal/cliflags"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
+	checkverb "github.com/procrastivity/toolsmith/internal/verbs/check"
 	doctorverb "github.com/procrastivity/toolsmith/internal/verbs/doctor"
 	installverb "github.com/procrastivity/toolsmith/internal/verbs/install"
 	manifestverb "github.com/procrastivity/toolsmith/internal/verbs/manifest"
@@ -57,6 +58,7 @@ func NewRootCommand(streams *iostreams.Streams, build buildinfo.Info) *cobra.Com
 	// Register the tool's own verbs here, one package per verb under
 	// internal/verbs/ (C1.4). Every Command constructor ends with
 	// surface.Annotate — the manifest walk hard-errors without it (C3.2).
+	root.AddCommand(checkverb.Command(streams))
 
 	return root
 }
