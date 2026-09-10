@@ -16,9 +16,21 @@ import (
 )
 
 // skeletonPrefix names the shipped skeleton subtree inside the asset tree.
-// The leading underscore is not decoration — assets/assets.go explains why
-// the directory cannot be called "skeleton" and why it carries go.mod.tmpl
-// rather than go.mod.
+// The leading underscore is not decoration: a directory containing a file
+// named exactly go.mod cannot be embedded ("cannot embed directory X: in
+// different module" — assets/assets.go's "all:" prefix does not help).
+// Renaming go.mod away is not sufficient by itself either: once it's gone,
+// the tree's .go files become ordinary packages of *this* module, and
+// `go build ./...`, `go vet ./...`, and `go test ./...` break on 23
+// unresolved imports the skeleton was never meant to resolve here. The "_"
+// prefix is what fixes that half — the go tool skips underscore-prefixed
+// directories when expanding "./..." — and go.mod.tmpl / go.sum.tmpl
+// (renamed back to go.mod / go.sum by destPath below) is what fixes the
+// embed half. Do not "fix" either one by reverting the name or the suffix;
+// a future reader who does will reintroduce both failures. assets.go's
+// "all:" prefix is also what makes the skeleton's dotfiles (.envrc,
+// .github/, .gitignore, …) embed at all — a bare pattern silently omits
+// them — and TestInstantiatedTree guards that they survive instantiation.
 const skeletonPrefix = "_skeleton"
 
 // placeholder spellings the skeleton uses, and nothing else (port spec

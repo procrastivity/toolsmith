@@ -69,10 +69,15 @@
             git-cliff
             gnumake
             pre-commit
+            shellcheck
           ];
 
+          # stderr, not stdout: `nix develop --command toolname manifest
+          # --json | jq` has to work, and anything this hook prints to
+          # stdout lands in front of the document (C2.1 in spirit — the
+          # tool owns its stdout, and so must its environment).
           shellHook = ''
-            echo "toolname dev shell — run 'make check' to lint+test, 'make hooks' to install pre-commit."
+            echo "toolname dev shell — run 'make check' to lint+test, 'make hooks' to install pre-commit." >&2
           '';
         };
       });

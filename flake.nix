@@ -1,5 +1,5 @@
 {
-  description = "toolsmith — the contract, playbook, and skeleton for procrastivity-style CLI tools";
+  description = "toolsmith — dev shell and package for the toolsmith Go CLI";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
@@ -77,7 +77,7 @@
           # stdout lands in front of the document (C2.1 in spirit — the
           # tool owns its stdout, and so must its environment).
           shellHook = ''
-            echo "toolsmith dev shell — run 'make check' to lint, test, and smoke-test the skeleton, 'make hooks' to install pre-commit." >&2
+            echo "toolsmith dev shell — run 'make check' to lint+test, 'make hooks' to install pre-commit." >&2
           '';
         };
       });

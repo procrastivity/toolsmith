@@ -1,6 +1,7 @@
-# cliff.toml — git-cliff config for toolsmith releases. Same shape as the
-# skeleton's copy (assets/_skeleton/cliff.toml): conventional commits from
-# commit one, keep-a-changelog groups, release-tag namespace v[0-9]*.
+# cliff.toml — git-cliff config for toolsmith's CHANGELOG. Conventional
+# commits from commit one (C6.6), keep-a-changelog groups, release-tag
+# namespace v[0-9]* — tag_pattern must agree with the Makefile's
+# `git describe --match` (C6.2).
 
 [changelog]
 header = "# Changelog\n\nAll notable changes to this project are documented here.\n\n"

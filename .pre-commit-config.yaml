@@ -1,10 +1,11 @@
-# .pre-commit-config.yaml — fast per-commit gates for the toolsmith repo
-# itself. The skeleton ships its own copy
-# (assets/_skeleton/.pre-commit-config.yaml) for instantiated tools; the
-# two serve different repos.
+# .pre-commit-config.yaml — fast per-commit gates. Stock hygiene hooks
+# from pre-commit-hooks, plus local hooks for the fast half of `make
+# check` (lint). The full test suite is intentionally NOT run per-commit —
+# it's slow, and "run tests before you commit" is a norm, not a per-commit
+# enforcement (C6.6). Run `make test` (or `make check`) before pushing.
 #
-# Bootstrap once: `make hooks` (installs BOTH the pre-commit and commit-msg
-# stages — the contract requires both, see CONTRACT.md C6).
+# Bootstrap once: `make hooks` — it installs BOTH the pre-commit and
+# commit-msg stages. Run on demand: `pre-commit run --all-files`.
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -13,9 +14,6 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        # skeleton YAML contains toolname placeholders but is valid YAML;
-        # no exclusions needed. Workflows under assets/_skeleton/.github are
-        # checked like any other YAML.
       - id: check-merge-conflict
 
   - repo: local

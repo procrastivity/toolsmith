@@ -9,42 +9,29 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
-.PHONY: fmt lint test smoke check parity build cross-compile changelog release-notes hooks
+# Every shell script the repo carries. The pre-commit hook checks only the
+# files a commit touches; this list is what `make lint`, and so CI's lint
+# job, checks in full.
+SHELLCHECK_FILES := .envrc contrib/check-commit-msg contrib/check-gofumpt
+
+.PHONY: fmt lint test check hooks build cross-compile changelog release-notes
 
 fmt:
 	gofumpt -w .
 
-# Shell scripts were the only executable code before the chassis landed
-# (Phase A); lint now also covers the Go module underneath cmd/ and
-# internal/, so shellcheck and golangci-lint both run here.
 lint:
-	shellcheck .envrc contrib/new-tool.sh contrib/check-contract contrib/check-commit-msg contrib/parity-check assets/_skeleton/.envrc assets/_skeleton/contrib/check-commit-msg assets/_skeleton/contrib/check-gofumpt
+	shellcheck $(SHELLCHECK_FILES)
 	golangci-lint run
 
 test:
 	go test ./...
 
-# The skeleton must stay a working Go module: instantiate it into a scratch
-# directory, then build, vet, and test the result. This is the same path
-# `contrib/new-tool.sh` gives a real conversion, so a green smoke run means
-# the next tool bootstraps green too.
-smoke:
-	rm -rf tmp/smoke
-	contrib/new-tool.sh smoke --dir tmp/smoke --no-git
-	cd tmp/smoke && CGO_ENABLED=0 go build ./... && go vet ./... && go test ./...
+check: lint test
 
-check: lint test smoke
-
-# The parity gate compares `toolsmith check` against its oracle,
-# contrib/check-contract, over a pinned corpus of real repos plus
-# generated probes (assets/playbook/parity-gate.md, docs/binary/port-spec.md
-# §10). The corpus lives on this host only — two of the five repos sit on
-# branches other than the one checked out — so this is deliberately not a
-# dependency of `check` and never runs in CI. `build` is a prerequisite
-# because the gate audits bin/toolsmith directly; the script itself
-# regenerates tmp/smoke (`make smoke`) before using it.
-parity: build
-	contrib/parity-check
+# Both hook types on purpose (C6.6): the commit-msg hook does not install
+# with the default stage.
+hooks:
+	pre-commit install --hook-type pre-commit --hook-type commit-msg
 
 # CGO_ENABLED=0 everywhere in this file (and in CI, and in the Nix package)
 # is load-bearing, not a default we happened to keep (C1.1): it's what
@@ -80,7 +67,4 @@ release-notes:
 		git-cliff --unreleased --tag "$(TAG)" --strip header --output dist/RELEASE_NOTES.md; \
 	fi
 
-# Both hook types on purpose: the commit-msg hook does not install with the
-# default stage, and wip shipped with exactly that gap (backport/wip.md).
-hooks:
-	pre-commit install --hook-type pre-commit --hook-type commit-msg
+include toolsmith.mk
