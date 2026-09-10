@@ -1,10 +1,21 @@
-# The toolsmith contract — v1
+# The toolsmith contract — v1.1
 
 **Status: normative.** This document is the cross-tool contract for
 procrastivity-style CLI tools. A tool that conforms declares
 `"contract": "toolsmith/v1"` in its manifest (C3.6). Amend this document
-only by decision (DECISIONS.md); bump the minor version for additive
-clauses and the major version for breaking ones (T20).
+only by decision (DECISIONS.md).
+
+**Versioning (T20, as amended by T24).** Additive clauses bump this
+document's minor version; breaking changes bump the major. The version a
+tool *declares* carries the major only — `toolsmith/v1`, never
+`toolsmith/v1.1` — so an additive clause never puts a shipped tool into
+a "behind" state it must cut a release to leave. That would be exactly
+the cross-repo version coupling T2 rejects, in exchange for a claim
+nothing verifies. Conformance is instead **derived**: the checker reports
+which clauses it audited and how they fared, so a tool's level is a
+measured fact rather than a self-report (T24). The minor lives here, in
+the clause history below, and is what a staleness check compares a
+tool's last reconciliation against.
 
 The contract descends from wip's packaging commitments and is now proven
 by three implementations: `wip` (the reference), `duo` (go branch), and
@@ -30,7 +41,8 @@ marked **[check]** are mechanically verifiable.
   dependency choices. If the tool needs SQLite, this constrains the
   driver to a pure-Go implementation (modernc.org/sqlite), never
   mattn/go-sqlite3.
-- **C1.2** `cmd/<tool>/main.go` does nothing beyond constructing
+- **C1.2** **[check]** (that `cmd/<tool>` exists as a main package)
+  `cmd/<tool>/main.go` does nothing beyond constructing
   streams and build info, calling the root command, and mapping the
   result to an exit code (~30 lines).
 - **C1.3** `internal/cli/root.go` is the single registration point. It
@@ -101,7 +113,8 @@ marked **[check]** are mechanically verifiable.
   never inferred from folder names.
 - **C3.3** Assets are listed with sha256 checksums so drift and
   tampering are detectable.
-- **C3.4** The manifest carries a self-committing `manifest_digest`: a
+- **C3.4** **[check]** (that the field is present and `sha256:`-prefixed)
+  The manifest carries a self-committing `manifest_digest`: a
   sha256 over its own canonical JSON with the digest field blanked
   (adopted from duo, T7). The digest turns the manifest into a
   comparable identity, which makes cheap drift checks possible without
@@ -230,7 +243,7 @@ marked **[check]** are mechanically verifiable.
   asset).
 - **C6.5** ci.yml runs lint, test, `nix build`, and a cross-compile
   matrix, each through `nix develop --command`. CI never publishes.
-  GitHub Actions are **SHA-pinned** (from duo main, T16). Workflows are
+  GitHub Actions are **SHA-pinned** (from duo main, T16) — **[check]**. Workflows are
   copied per tool, not shared by reference (T17).
 - **C6.6** **[check]** Conventional commits are enforced from commit
   one by a commit-msg hook (`contrib/check-commit-msg`), and
@@ -268,12 +281,42 @@ marked **[check]** are mechanically verifiable.
 
 ---
 
+## Clause history
+
+The minor version this document carries. Only clauses added *after* T20
+established the rule are dated here; everything else is the v1.0 body the
+contract was extracted with, and reconstructing a finer history for it
+would be invention.
+
+| Version | Clauses added | Note |
+|---|---|---|
+| v1.0 | C1.1–C7.5 as extracted | The body proven by wip, duo and ste9. |
+| v1.1 | C3.8 (T23) | Each verb records its positional-argument usage. The first additive clause after T20; it is what exposed that the document had nowhere to record a minor (T24). |
+
+A tool's declared string does not move with this table (T24) — see
+**Versioning** above.
+
 ## Conformance
 
-`contrib/check-contract <repo>` audits the **[check]**-marked clauses
-mechanically and reports findings by clause ID. The rest of the
-contract is audited by reading — a conversion's final workplan step is
-a reconciliation pass against this document.
+The conformance checker audits the **[check]**-marked clauses
+mechanically and reports findings by clause ID. That coverage is
+**partial and deliberately so**: most clauses here are prose, and a
+checker that pretended otherwise would be worse than one that admits its
+boundary. So the checker reports what it audited alongside what it
+found — a clean run means "clean against the clauses I can reach", never
+"conforms to the contract".
+
+A clause may be *partly* checkable: C1.1's `CGO_ENABLED=0`, C1.2's
+`cmd/<tool>` existence, C3.4's digest field. The marker sits at the
+sub-part it governs, and the mark set is expected to grow as clauses
+that read as prose turn out to have mechanical sub-parts. The marks and
+the checker's own emitted clause set must agree — if they drift, the
+document is lying about its coverage.
+
+The rest is audited by reading: a conversion's final workplan step is a
+reconciliation pass against this document, recorded with the minor
+version it was read against, so a later run can tell which clauses
+landed since.
 
 Tools declare their contract version in the manifest (C3.6) and are
 listed with it in TOOLS.md.
