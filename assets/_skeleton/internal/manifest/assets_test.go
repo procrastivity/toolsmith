@@ -9,9 +9,9 @@ import (
 
 // TestIsShippedAssetTable pins that the .go exclusion reaches exactly the
 // assets package's own source and nothing under a subdirectory. The
-// subdirectory rows are the regression toolsmith hit: a blanket "ends in
-// .go" test dropped the whole Go payload a tree-writing verb ships, which
-// put it outside the checksum list C3.3 keeps so drift and tampering are
+// subdirectory rows are the regression: a blanket "ends in .go" test once
+// dropped the whole Go payload a tree-writing verb ships, which put it
+// outside the checksum list C3.3 keeps so drift and tampering are
 // detectable, and outside the manifest_digest computed over it.
 func TestIsShippedAssetTable(t *testing.T) {
 	cases := []struct {

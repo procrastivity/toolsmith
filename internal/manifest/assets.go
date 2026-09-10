@@ -98,18 +98,16 @@ func walkEmbedded() ([]Asset, error) {
 // shipped asset content.
 //
 // The exclusion is deliberately top-level-only. A .go file inside a
-// subdirectory is shipped content: assets/_skeleton/ is the chassis the new
-// verb writes to disk, and its 32 Go sources are the payload. Excluding
-// every path ending in .go dropped all of them, which put the whole
-// instantiated chassis outside the checksum list C3.3 keeps so that drift
-// and tampering are detectable, and outside the manifest_digest computed
-// over it (C3.4).
+// subdirectory is shipped content, not infrastructure — a verb that writes
+// a tree ships that tree's sources as assets. Excluding every path ending
+// in .go once left a whole skeleton payload out of the checksum list C3.3
+// keeps to make drift and tampering detectable, and out of the
+// manifest_digest computed over it (C3.4).
 //
 // path is relative to the tree being walked and slash-separated, so
-// "assets.go" is the package's own source and "_skeleton/cmd/toolname/
-// main.go" is payload. Both callers must pass the relative form: an
-// absolute filesystem path always contains a separator and would defeat
-// this test.
+// "assets.go" is the package's own source and "templates/x/main.go" is
+// content. Both callers must pass the relative form: an absolute
+// filesystem path always contains a separator and would defeat this test.
 func isShippedAsset(path string) bool {
 	inSubdir := strings.Contains(path, "/")
 	return inSubdir || !strings.HasSuffix(path, ".go")

@@ -59,10 +59,10 @@ type Verb struct {
 	Kind surface.Kind `json:"kind"`
 
 	// Usage is the positional-argument portion of the verb's own cobra Use
-	// line, recorded verbatim: "<name>" for new, "[path]" for check, empty
-	// for a verb that takes none. Without it a consumer reading only the
-	// manifest — the harness projection is one — cannot tell that `new`
-	// requires an argument at all.
+	// line, recorded verbatim: "<name>" for a verb declared as
+	// `Use: "new <name>"`, empty for one that takes no positionals. Without
+	// it a consumer reading only the manifest — the harness projection is
+	// one — cannot tell that a verb requires an argument at all.
 	//
 	// It is recorded, never parsed. Cobra's Args validator is an opaque
 	// func, so the shape of a verb's positionals is not mechanically

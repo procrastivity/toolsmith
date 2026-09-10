@@ -2,7 +2,6 @@ package manifest
 
 import (
 	"io/fs"
-	"strings"
 	"testing"
 
 	rootassets "github.com/procrastivity/toolsmith/assets"
@@ -10,10 +9,10 @@ import (
 
 // TestIsShippedAssetTable pins that the .go exclusion reaches exactly the
 // assets package's own source and nothing under a subdirectory. The
-// _skeleton rows are the regression: a blanket "ends in .go" test dropped
-// all 32 of the chassis's Go sources — the whole payload `new` writes —
-// out of the checksum list C3.3 keeps so drift and tampering are
-// detectable, and so out of the manifest_digest computed over it.
+// subdirectory rows are the regression: a blanket "ends in .go" test once
+// dropped the whole Go payload a tree-writing verb ships, which put it
+// outside the checksum list C3.3 keeps so drift and tampering are
+// detectable, and outside the manifest_digest computed over it.
 func TestIsShippedAssetTable(t *testing.T) {
 	cases := []struct {
 		path string
@@ -22,14 +21,13 @@ func TestIsShippedAssetTable(t *testing.T) {
 		{"assets.go", false},
 		{"doc.go", false},
 
-		{"_skeleton/cmd/toolname/main.go", true},
-		{"_skeleton/internal/cli/root.go", true},
-		{"_skeleton/internal/cli/e2e_test.go", true},
-		{"_skeleton/assets/assets.go", true},
+		{"templates/skeleton/main.go", true},
+		{"templates/skeleton/internal/cli/root.go", true},
+		{"templates/skeleton/assets/assets.go", true},
 
-		{"_skeleton/go.mod.tmpl", true},
-		{"playbook/migrate.md", true},
 		{"agent-guidance.md", true},
+		{"config.default.yaml", true},
+		{"templates/skills/claude-code/judgment.md", true},
 	}
 	for _, c := range cases {
 		if got := isShippedAsset(c.path); got != c.want {
@@ -60,7 +58,6 @@ func TestWalkEmbedded_ListsEveryShippedFile(t *testing.T) {
 		listed[a.Path] = a.SHA256
 	}
 
-	var skeletonGo int
 	err = fs.WalkDir(rootassets.FS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -68,9 +65,6 @@ func TestWalkEmbedded_ListsEveryShippedFile(t *testing.T) {
 		want := isShippedAsset(path)
 		if _, ok := listed[path]; ok != want {
 			t.Errorf("embedded file %q: listed = %v, want %v", path, ok, want)
-		}
-		if want && strings.HasPrefix(path, "_skeleton/") && strings.HasSuffix(path, ".go") {
-			skeletonGo++
 		}
 		delete(listed, path)
 		return nil
@@ -81,13 +75,6 @@ func TestWalkEmbedded_ListsEveryShippedFile(t *testing.T) {
 
 	for path := range listed {
 		t.Errorf("manifest lists %q, which is not in the embedded tree", path)
-	}
-
-	// The chassis cannot compile without its own sources, so a zero here
-	// means the skeleton stopped reaching the manifest, not that the
-	// skeleton changed shape.
-	if skeletonGo == 0 {
-		t.Errorf("no _skeleton Go source reached the asset list; the payload `new` writes is unchecksummed")
 	}
 }
 

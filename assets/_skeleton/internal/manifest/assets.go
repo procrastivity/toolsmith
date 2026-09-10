@@ -99,10 +99,10 @@ func walkEmbedded() ([]Asset, error) {
 //
 // The exclusion is deliberately top-level-only. A .go file inside a
 // subdirectory is shipped content, not infrastructure — a verb that writes
-// a tree ships that tree's sources as assets, and toolsmith learned this by
-// excluding every path ending in .go and so leaving its own skeleton
-// payload out of the checksum list C3.3 keeps to make drift and tampering
-// detectable, and out of the manifest_digest computed over it (C3.4).
+// a tree ships that tree's sources as assets. Excluding every path ending
+// in .go once left a whole skeleton payload out of the checksum list C3.3
+// keeps to make drift and tampering detectable, and out of the
+// manifest_digest computed over it (C3.4).
 //
 // path is relative to the tree being walked and slash-separated, so
 // "assets.go" is the package's own source and "templates/x/main.go" is
