@@ -9,8 +9,8 @@ so at the top rather than deleting it (`assets/playbook/port-spec.md`,
 "Life after cutover").
 
 Matter: `toolsmith-binary`, Stage 4 ("port the verbs, one at a time").
-Companion divergence list: `docs/binary/parity-divergences.md` (not
-written by this step).
+Companion divergence list: `docs/binary/parity-divergences.md`,
+written at Step 16.
 
 Two oracles are in scope. Every numbered section below carries two
 subsections, `§N.1` for `contrib/check-contract` (138 lines, becomes
@@ -707,7 +707,13 @@ follows; anything not listed is a gap the gate does not reach.
   verbs pretty-print; the §9.7 CRLF exclusion — every corpus workflow
   file is LF-terminated, and parity-gate §3 requires a CRLF probe that
   must be generated with the exclusion already encoded; the §9.4 exit-0-with-stderr tension — no corpus
-  repo has 2+ `cmd/` entries; the §7 `set -e`-abort paths (a
+  repo has 2+ `cmd/` entries; the C6.3 tracked-CHANGELOG branch
+  (`contrib/check-contract:91-96`, §4.1 step 7) — the three external
+  corpus members are `git archive` extractions with no `.git`, so the
+  branch is gated off there entirely, and the two in-worktree members
+  generate `CHANGELOG.md` per release without committing it, which is
+  what C6.3 requires, so the finding cannot fire in either place; the
+  §7 `set -e`-abort paths (a
   permission-denied repo directory, a disk-full mid-`new`) — these are
   fault-injection cases, outside what a fixed corpus of real repos can
   produce at all, and belong in `docs/binary/parity-divergences.md`
