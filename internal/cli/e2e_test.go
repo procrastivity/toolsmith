@@ -6,6 +6,8 @@ package cli_test
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -147,6 +149,56 @@ func TestManifest_JSON_DeclaresContractAndDigest(t *testing.T) {
 	for _, v := range m.Verbs {
 		if v.Kind == "" {
 			t.Fatalf("verb %q carries no surface kind (C3.2)", v.Name)
+		}
+	}
+}
+
+// TestManifest_DigestCommitsToTheDocument checks C3.4's substance, not just
+// its prefix: the emitted manifest_digest must be a sha256 over the exact
+// bytes the caller received, with the digest field held empty. It does the
+// blanking on the raw stdout rather than by re-encoding a decoded document,
+// so it reproduces what an external consumer can do and stays independent
+// of the producing code's own marshalling.
+//
+// The property is what makes the asset list load-bearing: without it, an
+// edited shipped asset could leave the digest where it was.
+func TestManifest_DigestCommitsToTheDocument(t *testing.T) {
+	r := run(t, nil, "manifest", "--json")
+	if r.exitCode != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", r.exitCode, r.stderr)
+	}
+	var m struct {
+		ManifestDigest string `json:"manifest_digest"`
+	}
+	if err := json.Unmarshal([]byte(r.stdout), &m); err != nil {
+		t.Fatalf("manifest --json stdout is not one JSON value: %v", err)
+	}
+
+	emitted := strings.TrimRight(r.stdout, "\n")
+	blanked := strings.Replace(emitted, `"manifest_digest":"`+m.ManifestDigest+`"`, `"manifest_digest":""`, 1)
+	if blanked == emitted {
+		t.Fatalf("manifest_digest field not found verbatim in stdout; stdout=%q", emitted)
+	}
+	sum := sha256.Sum256([]byte(blanked))
+	want := "sha256:" + hex.EncodeToString(sum[:])
+	if m.ManifestDigest != want {
+		t.Fatalf("manifest_digest = %q, want %q — the digest does not commit to the document it rides in (C3.4)", m.ManifestDigest, want)
+	}
+}
+
+// TestManifest_IsDeterministic pins the premise manifest_digest's usefulness
+// as a comparable identity rests on: the same binary must emit the same
+// document every time, so neither the verb walk nor the asset walk may vary
+// with map or filesystem iteration order.
+func TestManifest_IsDeterministic(t *testing.T) {
+	first := run(t, nil, "manifest", "--json")
+	if first.exitCode != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", first.exitCode, first.stderr)
+	}
+	for i := range 2 {
+		again := run(t, nil, "manifest", "--json")
+		if again.stdout != first.stdout {
+			t.Fatalf("run %d differs from the first; the manifest is not deterministic", i+2)
 		}
 	}
 }
