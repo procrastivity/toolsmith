@@ -54,11 +54,42 @@ intend to merge across is a lie that git will keep asking you about.
 Record the cutover as a **deferred backlog entry** now, so nobody treats
 the branch flip as an implicit stage 7 deliverable.
 
+**When there is no old line to keep running.** All of the above assumes
+the old implementation is a separately installable thing — a package, a
+service, an existing binary — that users keep reaching for on the
+default branch while the new line grows on its own history. That does
+not hold when the old line is a script, or a handful of scripts, living
+in the same worktree as everything else with no install path of its
+own: there is nothing to keep serving users, because there was never a
+separate thing to stop installing. An orphan branch buys nothing there —
+it manufactures a default-branch split between two things that were
+never actually parallel-installable — so build the new tree on the
+existing default branch instead. Say so as a decision, not a skip: write
+one line in the sidecar recording that Stage 2 does not apply as a
+separate deliverable and why, so nobody reading the history mistakes the
+absence of an orphan branch for a step that got missed. The old scripts
+stay in the worktree, unmodified, until cutover (Stage 7) removes them;
+their presence does not block the new line landing beside them.
+
 ## Stage 3 — chassis first, from the skeleton
 
 ```
 contrib/new-tool.sh <tool> --dir <path-to-worktree>
 ```
+
+`new-tool.sh` **refuses a target directory that already exists** — it is
+built to create a fresh worktree, not to write into one that is already
+there. That is the common case for a conversion: the tool being ported
+already has a repo. Point `--dir` at a directory that does not exist yet
+(a scratch path outside the target repo) and add `--no-git`, which skips
+the script's own `git init` and first commit — you do not want a second,
+disconnected history competing with the repo you are converting into.
+Then move the generated tree's contents into the existing repo by hand
+and let that repo's own history take the commit. This is the same
+scratch-then-move path the Makefile's `smoke` target uses to instantiate
+the skeleton without writing into the live tree
+(`rm -rf tmp/smoke && contrib/new-tool.sh smoke --dir tmp/smoke
+--no-git`).
 
 Then work the checklist the script prints. Two of its items are
 judgment, not mechanics:
@@ -105,9 +136,23 @@ Two recurring traps:
 ## Stage 5 — let the manifest populate
 
 The manifest is not a stage. It is a consequence: it grows as verbs
-register, and it needs no work beyond the annotation each verb already
-carries. Check it after each verb (`<tool> manifest --json`) and treat
-any surprise as a defect in the verb, not in the manifest.
+register, and most of the time it needs no work beyond the annotation
+each verb already carries. Check it after each verb (`<tool> manifest
+--json`).
+
+Once the verb surface is complete, audit the manifest against
+CONTRACT.md's C3 clauses one by one — do not stop at eyeballing the
+running output after each verb. A glance after each verb catches a
+missing annotation; it will not catch an asset walk that silently
+excludes a whole class of file, or a shape the manifest has no field for
+at all. Expect a verb that introduces a new *kind* of thing to
+describe — a written payload where every prior verb only printed to
+stdout, a positional argument that carries meaning, a registered
+backend — to expose exactly that kind of gap in the walk or the manifest
+shape. Finding one is this stage's deliverable, not a sign the port went
+wrong: the manifest walk was written against the verbs that existed
+before this one, and a verb that changes what there is to describe is
+supposed to outrun it.
 
 ## Stage 6 — the install target, late and in parallel
 

@@ -76,10 +76,15 @@ old thing does" by the next person.
 Deliberate differences accumulate faster than the spec's §9 can hold
 them once the port is running. Split them into
 `docs/<matter>/parity-divergences.md` when they do (ste9's shape): one
-entry per divergence, each with a repro, both behaviors, and the
-rationale. The parity gate cannot find these — by definition they are
-outside the corpus it runs — so the list is the only record that they
-were decided rather than missed.
+entry per divergence, each with a repro, both behaviors, the rationale,
+and what the parity gate does with it. Most divergences the gate can and
+should see — asserted directly as a probe, asserted on both sides, or
+built into the comparison as a boundary
+(`assets/playbook/parity-gate.md` §9 names the kinds) — because a
+recorded exclusion decays silently while a probe fails loudly. Only a
+genuine corpus gap is truly invisible to the gate; the list is where
+even that is recorded, so every divergence reads as decided rather than
+missed, whichever kind it is.
 
 ## Life after cutover
 
