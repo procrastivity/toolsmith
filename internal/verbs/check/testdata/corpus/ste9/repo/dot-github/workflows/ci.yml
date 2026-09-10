@@ -1,0 +1,69 @@
+# CI for the ste9 Go CLI.
+#
+# Releasing is a separate workflow (M4) on its own tag trigger — this
+# workflow never publishes.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - run: nix develop --command make lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - run: nix develop --command make test
+
+  # Byte-for-byte parity between ste_lint.py (the oracle) and `ste9 lint`
+  # (see scripts/lint_parity.sh). Its own job, not folded into `test`,
+  # since it needs a built binary and python3 (both supplied by the
+  # devShell) rather than just `go test`.
+  lint-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - run: nix develop --command sh -c "make build && make lint-parity"
+
+  nix-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - run: nix build
+
+  # Build-only, not executed — no native darwin runner; cross-compilation
+  # means the linux runner is sufficient.
+  cross-compile:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - { os: darwin, arch: arm64 }
+          - { os: linux, arch: amd64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - name: build ${{ matrix.target.os }}/${{ matrix.target.arch }}
+        run: |
+          nix develop --command env \
+            CGO_ENABLED=0 GOOS=${{ matrix.target.os }} GOARCH=${{ matrix.target.arch }} \
+            go build -o dist/ste9-${{ matrix.target.os }}-${{ matrix.target.arch }} ./cmd/ste9

@@ -1,0 +1,13 @@
+C3.1: `ste9 manifest --json` failed or is not implemented
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: no .github/workflows/release.yml
+exit=1

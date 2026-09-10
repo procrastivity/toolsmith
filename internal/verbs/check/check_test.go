@@ -20,7 +20,7 @@ func run(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
 	var out, err bytes.Buffer
 	cmd := check.Command(&iostreams.Streams{Out: &out, Err: &err})
-	cmd.SetArgs(args)
+	cmd.SetArgs(append([]string{}, args...)) // never nil: Cobra reads os.Args on nil
 	cmd.SetOut(&out)
 	cmd.SetErr(&err)
 	// internal/cli.NewRootCommand sets these on root, and root renders

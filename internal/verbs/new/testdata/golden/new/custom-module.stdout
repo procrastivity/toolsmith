@@ -1,0 +1,19 @@
+instantiated acme at acme (module example.com/x/acme)
+
+Checklist — the judgment steps the rename cannot do:
+  1. grep -rn 'TODO(acme)' — fill every marker: root Short, README,
+     flake meta.description, the judgment and agent-guidance assets, the
+     skill description.
+  2. cd acme && CGO_ENABLED=0 go build ./... && go test ./...
+     (should already pass; it did in the skeleton).
+  3. nix build — it fails once and prints the real vendorHash; paste it
+     into flake.nix.
+  4. make hooks — installs both pre-commit stages.
+  5. Decide the verb surface; register verbs in internal/cli/root.go,
+     one package each, every constructor ending in surface.Annotate.
+  6. For a migration (not a fresh tool): follow toolsmith's
+     assets/playbook/migrate.md — port spec, parity gate, cutover.
+  7. Run contrib/check-contract acme from the toolsmith repo and
+     clear any findings.
+  8. Add the tool to toolsmith's TOOLS.md.
+exit=0

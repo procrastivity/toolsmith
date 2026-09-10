@@ -1,0 +1,15 @@
+C3.4: manifest --json carries no manifest_digest
+C3.6: manifest --json declares no toolsmith contract version
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: ci.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: ci.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.5: release.yml: action not SHA-pinned: - uses: actions/checkout@v4
+C6.5: release.yml: action not SHA-pinned: - uses: DeterminateSystems/nix-installer-action@v16
+C6.6: make hooks does not install the commit-msg stage
+C7.5: no README.md
+exit=1

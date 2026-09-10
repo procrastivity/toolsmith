@@ -22,7 +22,7 @@ func run(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	cmd := newverb.Command(&iostreams.Streams{Out: &out, Err: &errBuf})
-	cmd.SetArgs(args)
+	cmd.SetArgs(append([]string{}, args...)) // never nil: Cobra reads os.Args on nil
 	cmd.SetOut(&out)
 	cmd.SetErr(&errBuf)
 	cmd.SilenceUsage = true
