@@ -149,7 +149,8 @@ func renderSkillMD(m manifest.Manifest, verbs []manifest.Verb, judgment, guidanc
 			if desc == "" {
 				desc = "(no description)"
 			}
-			fmt.Fprintf(&b, "| `%s %s` | %s |\n", m.Tool.Name, v.Name, desc)
+			invocation := strings.TrimSpace(m.Tool.Name + " " + v.Name + " " + v.Usage)
+			fmt.Fprintf(&b, "| `%s` | %s |\n", invocation, desc)
 		}
 		fmt.Fprintf(&b, "\n")
 	}

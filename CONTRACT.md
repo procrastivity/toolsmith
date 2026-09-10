@@ -114,6 +114,11 @@ marked **[check]** are mechanically verifiable.
   and TOOLS.md read conformance from the tool, not from memory.
 - **C3.7** Output schemas per verb are permitted (`OutputSchema`) but
   never filled speculatively.
+- **C3.8** Each verb records its positional-argument usage verbatim from
+  its own declaration (`usage`; absent when it takes none) — recorded,
+  never parsed into structure (T23). A consumer that reads only the
+  manifest, the harness projection included, must be able to see that a
+  verb takes an argument at all.
 
 ## C4 — The install model
 

@@ -43,8 +43,8 @@ type Tool struct {
 
 // Arg describes one flag a verb declares on itself (its LocalFlags — the
 // global --json/-v pair is the chassis's, not a per-verb arg, and is
-// excluded). Positional arguments are not introspectable generically from a
-// Cobra command and are not described here.
+// excluded). A verb's positional arguments are not flags and are recorded
+// separately, as Verb.Usage.
 type Arg struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
@@ -55,8 +55,24 @@ type Arg struct {
 // the manifest itself never filters (C3.2); that happens only on the
 // harness-projection side (internal/harness).
 type Verb struct {
-	Name         string          `json:"name"`
-	Kind         surface.Kind    `json:"kind"`
+	Name string       `json:"name"`
+	Kind surface.Kind `json:"kind"`
+
+	// Usage is the positional-argument portion of the verb's own cobra Use
+	// line, recorded verbatim: "<name>" for new, "[path]" for check, empty
+	// for a verb that takes none. Without it a consumer reading only the
+	// manifest — the harness projection is one — cannot tell that `new`
+	// requires an argument at all.
+	//
+	// It is recorded, never parsed. Cobra's Args validator is an opaque
+	// func, so the shape of a verb's positionals is not mechanically
+	// introspectable; the Use line is the one place a verb declares it, and
+	// the angle/bracket convention it uses is a convention nothing enforces.
+	// Splitting it into {name, required, variadic} would be inventing
+	// structure from that convention, which is what C3.7 forbids doing
+	// speculatively. A consumer that needs structure earns the field then.
+	Usage string `json:"usage,omitempty"`
+
 	Args         []Arg           `json:"args"`
 	Description  string          `json:"description"`
 	OutputSchema json.RawMessage `json:"outputSchema,omitempty"`
