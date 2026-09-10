@@ -42,18 +42,22 @@ func walkDiskDir(dir string) ([]Asset, bool, error) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() || !isShippedAsset(path) {
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		relSlash := filepath.ToSlash(rel)
+		if !isShippedAsset(relSlash) {
 			return nil
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(dir, path)
-		if err != nil {
-			return err
-		}
-		out = append(out, Asset{Path: filepath.ToSlash(rel), SHA256: Checksum(data)})
+		out = append(out, Asset{Path: relSlash, SHA256: Checksum(data)})
 		return nil
 	})
 	if err != nil {
@@ -88,12 +92,25 @@ func walkEmbedded() ([]Asset, error) {
 	return out, nil
 }
 
-// isShippedAsset excludes the assets package's own Go source (assets.go's
-// //go:embed directive matches every file in the directory, including
-// itself and any future doc.go) — package infrastructure, not shipped
-// asset content.
+// isShippedAsset excludes the assets package's own Go source — assets.go,
+// whose //go:embed directive matches every file in the directory including
+// itself, and any future doc.go — as package infrastructure rather than
+// shipped asset content.
+//
+// The exclusion is deliberately top-level-only. A .go file inside a
+// subdirectory is shipped content, not infrastructure — a verb that writes
+// a tree ships that tree's sources as assets, and toolsmith learned this by
+// excluding every path ending in .go and so leaving its own skeleton
+// payload out of the checksum list C3.3 keeps to make drift and tampering
+// detectable, and out of the manifest_digest computed over it (C3.4).
+//
+// path is relative to the tree being walked and slash-separated, so
+// "assets.go" is the package's own source and "templates/x/main.go" is
+// content. Both callers must pass the relative form: an absolute
+// filesystem path always contains a separator and would defeat this test.
 func isShippedAsset(path string) bool {
-	return !strings.HasSuffix(path, ".go")
+	inSubdir := strings.Contains(path, "/")
+	return inSubdir || !strings.HasSuffix(path, ".go")
 }
 
 // Checksum returns data's sha256 hex digest — the checksum shape used
