@@ -1,6 +1,7 @@
 # .pre-commit-config.yaml — fast per-commit gates for the toolsmith repo
-# itself. The skeleton ships its own copy (skeleton/.pre-commit-config.yaml)
-# for instantiated tools; the two serve different repos.
+# itself. The skeleton ships its own copy
+# (assets/_skeleton/.pre-commit-config.yaml) for instantiated tools; the
+# two serve different repos.
 #
 # Bootstrap once: `make hooks` (installs BOTH the pre-commit and commit-msg
 # stages — the contract requires both, see CONTRACT.md C6).
@@ -13,7 +14,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
         # skeleton YAML contains toolname placeholders but is valid YAML;
-        # no exclusions needed. Workflows under skeleton/.github are
+        # no exclusions needed. Workflows under assets/_skeleton/.github are
         # checked like any other YAML.
       - id: check-merge-conflict
 
@@ -24,6 +25,19 @@ repos:
         entry: shellcheck
         language: system
         types: [shell]
+
+      - id: gofumpt
+        name: gofumpt -l
+        entry: contrib/check-gofumpt
+        language: system
+        files: '\.go$'
+
+      - id: golangci-lint
+        name: golangci-lint run
+        entry: golangci-lint run
+        language: system
+        pass_filenames: false
+        files: '\.go$'
 
       - id: conventional-commit-msg
         name: conventional commit message

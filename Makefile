@@ -1,10 +1,28 @@
 SHELL := bash
 
-.PHONY: lint smoke check hooks
+# --match keeps the stamp inside the release tag namespace, the same one
+# cliff.toml selects with tag_pattern (C6.2). Without it `git describe`
+# also picks up milestone tags like `phase-1`, and a build stamps
+# `phase-1-10-gabc1234` — a version string that matches no release.
+VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev/null || echo dev)
+COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
-# Shell scripts are the only executable code in Phase A; lint them all.
+.PHONY: fmt lint test smoke check build cross-compile changelog release-notes hooks
+
+fmt:
+	gofumpt -w .
+
+# Shell scripts were the only executable code before the chassis landed
+# (Phase A); lint now also covers the Go module underneath cmd/ and
+# internal/, so shellcheck and golangci-lint both run here.
 lint:
-	shellcheck contrib/new-tool.sh contrib/check-contract contrib/check-commit-msg skeleton/contrib/check-commit-msg skeleton/contrib/check-gofumpt
+	shellcheck .envrc contrib/new-tool.sh contrib/check-contract contrib/check-commit-msg assets/_skeleton/.envrc assets/_skeleton/contrib/check-commit-msg assets/_skeleton/contrib/check-gofumpt
+	golangci-lint run
+
+test:
+	go test ./...
 
 # The skeleton must stay a working Go module: instantiate it into a scratch
 # directory, then build, vet, and test the result. This is the same path
@@ -15,7 +33,41 @@ smoke:
 	contrib/new-tool.sh smoke --dir tmp/smoke --no-git
 	cd tmp/smoke && CGO_ENABLED=0 go build ./... && go vet ./... && go test ./...
 
-check: lint smoke
+check: lint test smoke
+
+# CGO_ENABLED=0 everywhere in this file (and in CI, and in the Nix package)
+# is load-bearing, not a default we happened to keep (C1.1): it's what
+# makes the single-static-binary/cross-compile promise hold regardless of
+# later dependency choices. In particular it constrains any future SQLite
+# dependency to a pure-Go driver (modernc.org/sqlite), never
+# mattn/go-sqlite3.
+build:
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/toolsmith ./cmd/toolsmith
+
+cross-compile:
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o dist/toolsmith-darwin-arm64 ./cmd/toolsmith
+	CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o dist/toolsmith-linux-amd64  ./cmd/toolsmith
+
+# CHANGELOG.md is generated per-release, never committed (C6.3): the tag is
+# the only human action, and git-cliff derives everything else from the
+# conventional-commit history. `changelog` writes the full history for
+# attachment as a release asset; `release-notes` writes just the slice
+# belonging to TAG, header-stripped, for the GitHub release body.
+changelog:
+	mkdir -p dist
+	git-cliff --output dist/CHANGELOG.md
+
+# TAG may name a tag that already exists (CI, where the push of the tag is
+# what started us) or one about to be cut (a local dry run before tagging).
+# Those need different git-cliff selections, so probe for the ref first.
+release-notes:
+	@test -n "$(TAG)" || { echo "error: TAG is required, e.g. make release-notes TAG=v0.1.0" >&2; exit 1; }
+	@mkdir -p dist
+	@if git rev-parse -q --verify "refs/tags/$(TAG)" >/dev/null; then \
+		git-cliff --current --strip header --output dist/RELEASE_NOTES.md; \
+	else \
+		git-cliff --unreleased --tag "$(TAG)" --strip header --output dist/RELEASE_NOTES.md; \
+	fi
 
 # Both hook types on purpose: the commit-msg hook does not install with the
 # default stage, and wip shipped with exactly that gap (backport/wip.md).

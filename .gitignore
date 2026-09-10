@@ -9,6 +9,10 @@
 # Instantiation smoke-test output
 /tmp/
 
+# Build artifacts
+/bin/
+/dist/
+
 # Nix
 /result
 /result-*

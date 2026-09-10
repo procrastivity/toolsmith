@@ -16,8 +16,11 @@
 # The mechanical rename is exhaustive by construction: the skeleton uses
 # exactly three placeholder spellings — `toolname` (identifiers, paths,
 # module segment), `TOOLNAME` (env prefix), and nothing else — so three
-# substitutions plus two directory renames produce a compiling tool. The
-# judgment steps that remain are printed as a checklist at the end.
+# substitutions, two directory renames, and two file renames (go.mod.tmpl /
+# go.sum.tmpl back to go.mod / go.sum — see assets/assets.go for why the
+# skeleton carries them as .tmpl in the first place) produce a compiling
+# tool. The judgment steps that remain are printed as a checklist at the
+# end.
 set -euo pipefail
 
 die() {
@@ -63,7 +66,7 @@ done
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(dirname "$script_dir")"
-skeleton_dir="$repo_dir/skeleton"
+skeleton_dir="$repo_dir/assets/_skeleton"
 [[ -d "$skeleton_dir" ]] || die "skeleton not found at $skeleton_dir"
 
 [[ -n "$target_dir" ]] || target_dir="$repo_dir/../$name"
@@ -76,9 +79,14 @@ upper_name="$(tr '[:lower:]' '[:upper:]' <<<"$name")"
 mkdir -p "$target_dir"
 cp -R "$skeleton_dir/." "$target_dir/"
 
-# Directory renames first, so the content pass sees final paths.
+# Directory renames first, so the content pass sees final paths. The error
+# package needs its file renamed too: Go does not care what a file is
+# called, so a stray toolnameerr.go compiles and the gap stayed invisible
+# until toolsmith converted itself and its own tree disagreed with the one
+# its instantiator produces.
 mv "$target_dir/cmd/toolname" "$target_dir/cmd/$name"
 mv "$target_dir/internal/toolnameerr" "$target_dir/internal/${name}err"
+mv "$target_dir/internal/${name}err/toolnameerr.go" "$target_dir/internal/${name}err/${name}err.go"
 
 # Content pass: module path first (it contains `toolname` as a segment,
 # and must not be re-hit by the generic rename), then the two placeholder
@@ -90,6 +98,15 @@ while IFS= read -r -d '' f; do
     -e "s|TOOLNAME|$upper_name|g" \
     "$f"
 done < <(find "$target_dir" -type f -print0)
+
+# The skeleton ships go.mod.tmpl / go.sum.tmpl, not go.mod / go.sum,
+# because a real go.mod inside assets/_skeleton would make the tree
+# unembeddable from assets/assets.go ("cannot embed directory X: in
+# different module"). Put the real names back now that the tree is a
+# standalone module on disk again — skip this and `go build`/`go test` in
+# the instantiated tree have no module to build.
+mv "$target_dir/go.mod.tmpl" "$target_dir/go.mod"
+mv "$target_dir/go.sum.tmpl" "$target_dir/go.sum"
 
 if [[ $do_git -eq 1 ]]; then
   git -C "$target_dir" init -q -b main
@@ -112,7 +129,7 @@ Checklist — the judgment steps the rename cannot do:
   5. Decide the verb surface; register verbs in internal/cli/root.go,
      one package each, every constructor ending in surface.Annotate.
   6. For a migration (not a fresh tool): follow toolsmith's
-     playbook/migrate.md — port spec, parity gate, cutover.
+     assets/playbook/migrate.md — port spec, parity gate, cutover.
   7. Run contrib/check-contract $target_dir from the toolsmith repo and
      clear any findings.
   8. Add the tool to toolsmith's TOOLS.md.

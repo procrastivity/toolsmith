@@ -97,7 +97,7 @@ git. Its grep list names `claude-code, codex, pi, opencode` — it
 predates both `devin` landing and `amp`, so following it today misses a
 call site. Decide one of:
 
-- delete it — `playbook/new-harness-target.md` in toolsmith now covers
+- delete it — `assets/playbook/new-harness-target.md` in toolsmith now covers
   the genre, and the specific Devin facts live in the shipped package;
 - or commit it under `docs/<matter>/` as a dated research record, with
   its own header saying the target shipped and the wire-up list is

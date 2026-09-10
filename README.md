@@ -30,13 +30,13 @@ clauses the conformance checker and tool code comments cite.
 
 - **Migrating something that exists** — a Claude skill, a plugin, a
   marketplace entry, an output style, scripts around a prompt. Start at
-  [playbook/intake.md](playbook/intake.md): it classifies what you
+  [assets/playbook/intake.md](assets/playbook/intake.md): it classifies what you
   have, maps each part to a contract slot, and tells you what to ask
   the owner when it is not sure. Then
-  [playbook/migrate.md](playbook/migrate.md) runs the staged
+  [assets/playbook/migrate.md](assets/playbook/migrate.md) runs the staged
   conversion.
 - **Bootstrapping something new** — no legacy, no parity oracle. Go
-  straight to [playbook/bootstrap.md](playbook/bootstrap.md) and
+  straight to [assets/playbook/bootstrap.md](assets/playbook/bootstrap.md) and
   `contrib/new-tool.sh`.
 
 ## What is in here
@@ -46,9 +46,9 @@ clauses the conformance checker and tool code comments cite.
 | [CONTRACT.md](CONTRACT.md) | The versioned cross-tool contract (normative). |
 | [DECISIONS.md](DECISIONS.md) | Register of decisions that shaped the contract (T-numbers). |
 | [TOOLS.md](TOOLS.md) | Fleet register: every tool, its contract version, its status. |
-| [playbook/](playbook/) | Intake, migrate, bootstrap, port-spec, parity-gate, new-harness-target, release-and-hygiene. |
-| [handoff-kit/](handoff-kit/) | Templates for running a conversion as its own planning sidecar (HANDOFF, seed cards, workplans) — the wip-reboot process, productized. |
-| [skeleton/](skeleton/) | A compiling Go module with `toolname` placeholders: the chassis, manifest, one worked harness target, release tooling, CI, hygiene. |
+| [assets/playbook/](assets/playbook/) | Intake, migrate, bootstrap, port-spec, parity-gate, new-harness-target, release-and-hygiene. |
+| [assets/handoff-kit/](assets/handoff-kit/) | Templates for running a conversion as its own planning sidecar (HANDOFF, seed cards, workplans) — the wip-reboot process, productized. |
+| [assets/_skeleton/](assets/_skeleton/) | A compiling Go module with `toolname` placeholders: the chassis, manifest, one worked harness target, release tooling, CI, hygiene. |
 | [contrib/new-tool.sh](contrib/new-tool.sh) | Instantiates the skeleton: copy + mechanical rename + first commit + checklist. |
 | [contrib/check-contract](contrib/check-contract) | Audits any tool repo against the contract's mechanical clauses; findings by clause ID. |
 | [backport/](backport/) | Punch lists of fixes flowing back into existing tools (wip first). |
@@ -66,7 +66,7 @@ contrib/check-contract ~/Code/wip
 ```
 
 A conversion normally runs as an agent-seeded session: create a sidecar
-planning repo from [handoff-kit/](handoff-kit/), seed the session with
+planning repo from [assets/handoff-kit/](assets/handoff-kit/), seed the session with
 CONTRACT.md + the playbook page for your entry mode + the handoff, and
 let the workplans drive. The skeleton and scripts do the mechanical
 part either way.
