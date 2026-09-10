@@ -2,9 +2,14 @@
 // directory plus a .claude-plugin/plugin.json in the same directory — the
 // "skills-dir as plugin" mechanism: no marketplace manifest, no separate
 // registry entry. Everything in the generated tree traces back to the
-// manifest except two verbatim, hand-authored strings: the per-harness
-// judgment paragraph and the shared agent-guidance paragraph, both
-// resolved through the asset chain (C4.4).
+// manifest except four verbatim, hand-authored strings. Two ride the
+// asset chain as C4.4 describes: the per-harness judgment paragraph
+// (this harness's own to revise) and the shared agent-guidance
+// paragraph (shared across every future harness target, and not this
+// package's to rewrite). Two do not: the one-line skillDescription
+// below, and renderPluginJSON's fixed "...'s own generated plumbing-verb
+// skill." suffix. C4.4's text names only the first pair, so the second
+// pair is a tension with the clause rather than a conformance to it.
 package claudecode
 
 import (
@@ -26,18 +31,23 @@ const Name = "claude-code"
 // skillName is the directory name the generated skill is installed under.
 const skillName = "toolname"
 
-// skillDescription is the SKILL.md frontmatter description.
-// TODO(toolname): replace with one line saying what this tool's verb
-// surface does — Claude reads it to decide when to load the skill.
+// skillDescription is the SKILL.md frontmatter description: one sentence
+// naming the situations this skill triggers on, not the verbs it exposes
+// (those are generated, in the table below). Judgment prose by function,
+// short enough that it lives inline rather than riding the asset chain —
+// which is exactly the tension with C4.4 the package comment names.
+// TODO(toolname): replace with one line saying when to reach for this
+// tool — Claude reads it to decide when to load the skill.
 const skillDescription = "Drive toolname through its plumbing verb surface."
 
-// judgmentAsset is the one hand-authored prose paragraph this harness
-// owns, resolved through the asset chain.
+// judgmentAsset is the per-harness judgment paragraph, this harness's own
+// hand-authored prose, resolved through the asset chain (C4.4).
 const judgmentAsset = "templates/skills/claude-code/judgment.md"
 
 // guidanceAsset is the shared agent-guidance paragraph, seeded at the top
-// level of the shipped asset tree and projected here verbatim — the only
-// other hand-written string in the generated tree.
+// level of the shipped asset tree and projected here verbatim. It is
+// hand-written like judgmentAsset and skillDescription, but it is shared
+// across every harness target rather than owned by this one.
 const guidanceAsset = "agent-guidance.md"
 
 // SkillsDirEnv is an environment variable that, when set, overrides
