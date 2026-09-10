@@ -3,6 +3,11 @@ Workplan template (toolsmith handoff-kit). Copy to your sidecar as
 workplans/<slug>.md, one per Matter. Delete this comment and the
 > GUIDANCE blocks once the workplan is real.
 
+Use this file when the conversion has no tracker (T22). When a tracker
+holds the Matter register, its workplan slot is the register and this
+template is a section checklist for what to write there — do not also
+keep a copy here.
+
 A workplan is written before the work and amended during it. When the
 Matter seals, the file must read as an accurate description of what was
 actually built — that is what the reconciliation Step at the end is for.

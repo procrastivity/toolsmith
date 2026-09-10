@@ -34,18 +34,21 @@ each with a short rationale or carry it as an explicit early Step.
 > GUIDANCE — these are binding on every later session, so keep them few
 > and keep them checkable. Recurring ones worth stating explicitly:
 > what process machinery does *not* exist yet; where ordering comes from
-> (the edge list, never list position); what may run concurrently; the
-> workplan output format; whether early plans may be amended.
+> (the edge list, never list position); what may run concurrently; where
+> the workplans live (T22 — the sidecar or a tracker, never both);
+> whether early plans may be amended.
 
 1. **<Constraint>.** <Why, in one or two sentences.>
 2. **Ordering comes only from the edge list (§5).** Sibling order in any
    list in this document is presentation-only. Never infer sequence from
    position.
-3. **Workplan output format:** one file per Matter,
-   `workplans/<slug>.md`, containing intent (one paragraph); a Brief
-   only if §3 says the Matter earns one; Stages and/or Steps with
-   per-Step done-criteria; `blocked-by` edges restated; the seal
-   condition; subagent notes where relevant.
+3. **Where the workplans live (T22):** <`workplans/<slug>.md` in this
+   sidecar, one file per Matter | the tracker, at <name and locator
+   scheme>>. Name one and only one, so a session arriving cold does not
+   create the other. Either way a workplan contains intent (one
+   paragraph); a Brief only if §3 says the Matter earns one; Stages
+   and/or Steps with per-Step done-criteria; `blocked-by` edges
+   restated; the seal condition; subagent notes where relevant.
 4. **Early-planning risk is accepted.** If an early Matter's
    implementation invalidates a later workplan, amend that workplan.
    The plan is not fixed.

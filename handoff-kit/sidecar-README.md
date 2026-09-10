@@ -32,7 +32,7 @@ are not.
 mkdir ../<tool>-reboot && cd ../<tool>-reboot && git init
 cp <toolsmith>/handoff-kit/HANDOFF-template.md    HANDOFF.md
 cp <toolsmith>/handoff-kit/SEED-CARDS-template.md SEED-CARDS.md
-mkdir workplans
+mkdir workplans     # only when the conversion has no tracker — see below
 ```
 
 Then add whatever design documents this conversion needs. Typically:
@@ -44,13 +44,43 @@ Then add whatever design documents this conversion needs. Typically:
 | `intake.md` | The intake sheet from `playbook/intake.md`. |
 | `HANDOFF.md` | The bridge from planning to execution. Its §1 constraints are binding on every later session. |
 | `SEED-CARDS.md` | Per-Matter reading lists, so a session reads exactly what it needs. |
-| `workplans/<slug>.md` | One per Matter: intent, Brief if earned, Steps with done-criteria, edges, seal. |
+| `workplans/<slug>.md` | One per Matter: intent, Brief if earned, Steps with done-criteria, edges, seal. Present only when there is no tracker — see "Where the workplans live". |
 | `appendix-*.md` | Deep dives too long for the model: packaging, a subsystem, a protocol. |
 
 Small conversions collapse this: a single `HANDOFF.md` plus two or three
 workplans is a legitimate sidecar. The shape scales down, and the
 temptation to skip it entirely is what produces the third session that
 re-decides the exit-code table.
+
+## Where the workplans live (T22)
+
+This kit describes a **model** and offers one **medium** for it. Keep the
+two apart, because only the model is fixed.
+
+The model is: a Matter has one intent and one seal condition; shape is
+earned, never default; ordering comes only from the edge list. That holds
+for every conversion.
+
+The medium is where the model is written down, and there are two:
+
+- **No tracker.** `workplans/<slug>.md`, one file per Matter, is the
+  register. Create the directory and write the files. This is the
+  default, and the kit's vocabulary — Matter, Stage, Step, seal — is
+  yours to use as plain words.
+- **A tracker with a workplan slot.** The tracker is the register, and
+  the directory is not created. Do not keep a second copy in the
+  sidecar: two copies of a workplan diverge by the third session, which
+  is the same failure this whole pattern exists to prevent.
+
+`HANDOFF.md` and `SEED-CARDS.md` are files either way. They are the
+bridge and the reading lists; no tracker holds them well, and a receiving
+session needs them before it has a Matter to open.
+
+Whichever medium you pick, **say so in `HANDOFF.md` §1**, so a session
+arriving cold knows where to look and does not create the other one.
+
+That vocabulary came from wip, where this pattern was first run, and wip
+is one such tracker. The words are not a dependency on it.
 
 ## Point the tool repo at it
 
@@ -71,7 +101,7 @@ Seed each working session with the smallest correct set:
 2. the playbook page for the current stage;
 3. `HANDOFF.md` §1 and §2 (constraints and locked decisions);
 4. the seed card for the Matter at hand;
-5. that Matter's workplan.
+5. that Matter's workplan, from whichever medium §1 names.
 
 The seed card exists precisely so that item 5 does not expand into "read
 the whole sidecar". A session that reads everything spends its context
