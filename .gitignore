@@ -1,6 +1,11 @@
 # Private, uncommitted project instructions
 /CLAUDE.local.md
 
+# wip's per-clone render tree. Ignored by decision, not by
+# .git/info/exclude (C6.8): wip's doctor refuses to render into a
+# tracked .wip/, and the Matters themselves live in wip, not here.
+/.wip/
+
 # Instantiation smoke-test output
 /tmp/
 
