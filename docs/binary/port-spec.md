@@ -415,7 +415,13 @@ invocations (line 112-114) but not hermetically guaranteed silent (see
 ## 6. Configuration and environment
 
 Neither oracle reads an environment variable to change its behavior.
-`new-tool.sh` **sets** one, narrowly: `LC_ALL=C` prefixed onto the single
+Each **sets** one, narrowly. `check-contract` prefixes `CGO_ENABLED=0`
+onto its single `go run ./cmd/<tool> manifest --json` invocation
+(`contrib/check-contract:72`), and runs it with the audited repo as the
+working directory (`cd "$repo" && …` in a subshell, so the oracle's own
+cwd is untouched); the port must reproduce both, or a repo with cgo
+sources audits differently under the two implementations.
+`new-tool.sh` sets the other: `LC_ALL=C` prefixed onto the single
 `sed -i` invocation only (`contrib/new-tool.sh:95`), not exported for the
 rest of the script — everything before and after that line runs under
 whatever locale the caller's shell already has. Neither script reads
