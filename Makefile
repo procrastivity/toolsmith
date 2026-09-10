@@ -9,7 +9,7 @@ COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
-.PHONY: fmt lint test smoke check build cross-compile changelog release-notes hooks
+.PHONY: fmt lint test smoke check parity build cross-compile changelog release-notes hooks
 
 fmt:
 	gofumpt -w .
@@ -18,7 +18,7 @@ fmt:
 # (Phase A); lint now also covers the Go module underneath cmd/ and
 # internal/, so shellcheck and golangci-lint both run here.
 lint:
-	shellcheck .envrc contrib/new-tool.sh contrib/check-contract contrib/check-commit-msg assets/_skeleton/.envrc assets/_skeleton/contrib/check-commit-msg assets/_skeleton/contrib/check-gofumpt
+	shellcheck .envrc contrib/new-tool.sh contrib/check-contract contrib/check-commit-msg contrib/parity-check assets/_skeleton/.envrc assets/_skeleton/contrib/check-commit-msg assets/_skeleton/contrib/check-gofumpt
 	golangci-lint run
 
 test:
@@ -34,6 +34,17 @@ smoke:
 	cd tmp/smoke && CGO_ENABLED=0 go build ./... && go vet ./... && go test ./...
 
 check: lint test smoke
+
+# The parity gate compares `toolsmith check` against its oracle,
+# contrib/check-contract, over a pinned corpus of real repos plus
+# generated probes (assets/playbook/parity-gate.md, docs/binary/port-spec.md
+# §10). The corpus lives on this host only — two of the five repos sit on
+# branches other than the one checked out — so this is deliberately not a
+# dependency of `check` and never runs in CI. `build` is a prerequisite
+# because the gate audits bin/toolsmith directly; the script itself
+# regenerates tmp/smoke (`make smoke`) before using it.
+parity: build
+	contrib/parity-check
 
 # CGO_ENABLED=0 everywhere in this file (and in CI, and in the Nix package)
 # is load-bearing, not a default we happened to keep (C1.1): it's what
