@@ -74,6 +74,17 @@ payload shape, or a recorded ruling that a verb may decline `--json`.
 `check`'s payload is where T24's derived conformance would report the
 audited clause set.
 
+**Resolution (contract-v1-2-reconcile step-07, step-08):** both verbs read
+`--json`, and no verb may decline it.
+
+- `check --json` writes `{"findings":[{"code","message"}],"audited":[...]}`.
+  `findings` has doctor's shape (T21), with the clause ID as `code`, and
+  `audited` lists the clause IDs the checker covers, for T24 to build on.
+- `new --json` writes `{"name","dir","module","git"}` on success, in place of
+  the checklist.
+
+Both text paths are unchanged, byte for byte.
+
 ### C2.5 — error codes outside the prefix set (port, chassis)
 
 **The clause:** `Code` is a dotted token under `refusal.*`, `validation.*`,
@@ -120,6 +131,15 @@ into the five.
   `evidence/2026-09-11-toolsmith-conformance.md` §7 recorded.
 
 `doctor.findings-present` stays open until the contract amendment.
+
+**Resolution, part 2 (contract-v1-2-reconcile step-05, step-06):** C2.5
+now sanctions one form outside the five prefixes, `<verb>.findings-present`
+with exit 1, for a verb whose findings are its verdict (T26, contract v1.2).
+The findings stay on stdout as the payload, and C2.2 names that exception.
+`doctor.findings-present` conforms with no code change. `check` now returns
+`check.findings-present` through Render, in place of `exitcode.Silent(1)`,
+so its stderr summary is the rendered line `toolsmith: check: N finding(s)
+for <repo>`.
 
 ### C4.2 — a duplicate registration does not panic (chassis)
 

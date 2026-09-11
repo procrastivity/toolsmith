@@ -158,6 +158,13 @@ toolsmith's chassis added the guard inside `namesOf`, with a unit test
 program construction, so no `init()` is needed (C1.3). The same few lines
 port to wip unchanged.
 
+**13. `doctor.findings-present` now conforms to C2.5 (T26). No change needed.**
+wip's one code outside C2.5's five prefixes is `doctor.findings-present`
+(`internal/verbs/doctor/doctor.go:167`). Contract v1.2 sanctions exactly
+that form, `<verb>.findings-present` with exit 1, for a verb whose findings
+are its verdict. Nothing in wip moves. Recorded so that nobody renames the
+code into `validation.*`, which the ruling rejected.
+
 ---
 
 ## Not a defect
