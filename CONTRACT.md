@@ -36,12 +36,13 @@ marked **[check]** are mechanically verifiable.
 
 - **C1.1** The tool is a single static Go binary built with cobra.
   `CGO_ENABLED=0` in the Makefile, CI, and the Nix package — all three.
-  **[check]** covers the Makefile and the Nix package, not CI. This is
-  load-bearing, not a default: it is what makes the
-  single-binary/cross-compile promise hold regardless of later
-  dependency choices. If the tool needs SQLite, this constrains the
-  driver to a pure-Go implementation (modernc.org/sqlite), never
-  mattn/go-sqlite3.
+  **[check]** covers all three: the Makefile, `.github/workflows/ci.yml`,
+  and `flake.nix`, each for the setting anywhere in the file, not at
+  every build it governs. This is load-bearing, not a default:
+  it is what makes the single-binary/cross-compile promise hold
+  regardless of later dependency choices. If the tool needs SQLite, this
+  constrains the driver to a pure-Go implementation (modernc.org/sqlite),
+  never mattn/go-sqlite3.
 - **C1.2** **[check]** (that `cmd/<tool>` exists as a main package)
   `cmd/<tool>/main.go` does nothing beyond constructing
   streams and build info, calling the root command, and mapping the
@@ -307,15 +308,14 @@ boundary. So the checker reports what it audited alongside what it
 found — a clean run means "clean against the clauses I can reach", never
 "conforms to the contract".
 
-A clause may be *partly* checkable: C1.1's `CGO_ENABLED=0` in two of
-the three places it names, C1.2's `cmd/<tool>` existence, C3.4's digest
-field. The marker says exactly which part it covers. A mark that claims
-more than the checker reads is the document overclaiming, even when the
-clause ID is correctly marked. The marker sits at the
-sub-part it governs, and the mark set is expected to grow as clauses
-that read as prose turn out to have mechanical sub-parts. The marks and
-the checker's own emitted clause set must agree — if they drift, the
-document is lying about its coverage.
+A clause may be *partly* checkable: C1.2's `cmd/<tool>` existence, C3.4's
+digest field. The marker says exactly which part it covers. A mark that
+claims more than the checker reads is the document overclaiming, even
+when the clause ID is correctly marked. The marker sits at the sub-part
+it governs, and the mark set is expected to grow as clauses that read as
+prose turn out to have mechanical sub-parts. The marks and the checker's
+own emitted clause set must agree — if they drift, the document is
+lying about its coverage.
 
 The rest is audited by reading: a conversion's final workplan step is a
 reconciliation pass against this document, recorded with the minor

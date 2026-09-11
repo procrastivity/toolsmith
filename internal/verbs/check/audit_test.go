@@ -137,6 +137,79 @@ func TestAudit_TagNamespace(t *testing.T) {
 
 func strPtr(s string) *string { return &s }
 
+// TestCgoEnabled_CI covers step-37's ci.yml sub-check in isolation:
+// cgoEnabled is called directly, with a conformant Makefile and
+// flake.nix present in every case, so only the ci.yml content varies.
+func TestCgoEnabled_CI(t *testing.T) {
+	const conformantMakefile = "CGO_ENABLED=0\n"
+	const conformantFlake = "{ env.CGO_ENABLED = 0; }\n"
+
+	tests := []struct {
+		name   string
+		noFile bool // true: don't create ci.yml at all
+		ciYML  string
+		want   []Finding
+	}{
+		{
+			name:   "ci.yml absent: no CI finding",
+			noFile: true,
+		},
+		{
+			name:  "shell assignment form: CGO_ENABLED=0",
+			ciYML: "jobs:\n  build:\n    steps:\n      - run: CGO_ENABLED=0 go build ./...\n",
+		},
+		{
+			name:  "YAML env form, unquoted: CGO_ENABLED: 0",
+			ciYML: "jobs:\n  build:\n    env:\n      CGO_ENABLED: 0\n",
+		},
+		{
+			name:  `YAML env form, double-quoted: CGO_ENABLED: "0"`,
+			ciYML: "jobs:\n  build:\n    env:\n      CGO_ENABLED: \"0\"\n",
+		},
+		{
+			name:  "YAML env form, single-quoted: CGO_ENABLED: '0'",
+			ciYML: "jobs:\n  build:\n    env:\n      CGO_ENABLED: '0'\n",
+		},
+		{
+			name:  "shell assignment set to 1: finding",
+			ciYML: "jobs:\n  build:\n    steps:\n      - run: CGO_ENABLED=1 go build ./...\n",
+			want:  []Finding{{"C1.1", "ci.yml does not set CGO_ENABLED=0"}},
+		},
+		{
+			name:  `YAML env form set to "1": finding`,
+			ciYML: "jobs:\n  build:\n    env:\n      CGO_ENABLED: \"1\"\n",
+			want:  []Finding{{"C1.1", "ci.yml does not set CGO_ENABLED=0"}},
+		},
+		{
+			name:  "no mention at all: finding",
+			ciYML: "jobs:\n  build:\n    steps:\n      - run: go build ./...\n",
+			want:  []Finding{{"C1.1", "ci.yml does not set CGO_ENABLED=0"}},
+		},
+		{
+			// port spec §9.7's CRLF concern, checked the other direction:
+			// a CRLF-terminated YAML env line still matches.
+			name:  `CRLF file, YAML env form CGO_ENABLED: "0": no finding`,
+			ciYML: "jobs:\r\n  build:\r\n    env:\r\n      CGO_ENABLED: \"0\"\r\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := t.TempDir()
+			writeFile(t, repo, "Makefile", conformantMakefile)
+			writeFile(t, repo, "flake.nix", conformantFlake)
+			if !tt.noFile {
+				writeFile(t, repo, filepath.Join(".github", "workflows", "ci.yml"), tt.ciYML)
+			}
+			a := &auditor{repo: repo}
+			a.cgoEnabled()
+			if !reflect.DeepEqual(a.findings, tt.want) {
+				t.Fatalf("findings = %v, want %v", a.findings, tt.want)
+			}
+		})
+	}
+}
+
 // TestCheckManifestDoc covers §9.1's "parse, don't grep" field checks
 // against synthetic manifest documents, including the case the oracle's
 // grep gets wrong: a pretty-printed (spaced) document that is otherwise

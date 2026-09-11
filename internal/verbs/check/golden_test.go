@@ -393,6 +393,19 @@ func checkCases(t *testing.T) []checkCase {
 			if strings.Contains(stdout, "action not SHA-pinned") {
 				t.Errorf("port spec §9.7: a correctly SHA-pinned CRLF action was reported as unpinned:\n%s", stdout)
 			}
+			if strings.Contains(stdout, "C1.1: ci.yml") {
+				t.Errorf("step-37: a CRLF-terminated YAML env CGO_ENABLED=0 line was reported as missing:\n%s", stdout)
+			}
+		},
+	})
+	cases = append(cases, checkCase{
+		name:  "probe-c11-ci",
+		setup: generateC11CIProbe,
+		invariant: func(t *testing.T, stdout string) {
+			t.Helper()
+			if !strings.Contains(stdout, "C1.1: ci.yml does not set CGO_ENABLED=0") {
+				t.Errorf("step-37: a ci.yml that never sets CGO_ENABLED=0 was not reported under C1.1:\n%s", stdout)
+			}
 		},
 	})
 	cases = append(cases, checkCase{
@@ -488,8 +501,17 @@ func generateMulticmdProbe(t *testing.T, dir string) {
 		"      - 'fmt\\.Print('\n")
 	mustWriteFile(t, dir, "cliff.toml", "tag_pattern = \"v[0-9]*\"\n")
 	for _, wf := range []string{"ci", "release"} {
+		steps := "      - run: nix develop --command true\n      - uses: actions/checkout@" + probeSHA + "\n"
+		if wf == "ci" {
+			// step-37: ci.yml is now read for C1.1's CGO_ENABLED=0 too;
+			// this probe's Makefile and flake.nix are already
+			// conformant, so ci.yml needs it as well to keep this case
+			// otherwise-clean (the exit-0-with-stderr-note carve-out it
+			// pins).
+			steps += "      - run: CGO_ENABLED=0 go build ./...\n"
+		}
 		mustWriteFile(t, dir, ".github/workflows/"+wf+".yml",
-			fmt.Sprintf("name: %s\njobs:\n  build:\n    steps:\n      - run: nix develop --command true\n      - uses: actions/checkout@%s\n", wf, probeSHA))
+			fmt.Sprintf("name: %s\njobs:\n  build:\n    steps:\n%s", wf, steps))
 	}
 	mustWriteFile(t, dir, "contrib/check-commit-msg", "")
 	mustWriteFile(t, dir, ".pre-commit-config.yaml", "repos:\n  - hooks:\n      - id: commit-msg\n")
@@ -499,8 +521,27 @@ func generateMulticmdProbe(t *testing.T, dir string) {
 func generateCRLFProbe(t *testing.T, dir string) {
 	t.Helper()
 	mustMkdirAll(t, filepath.Join(dir, ".github", "workflows"))
-	content := "name: ci\r\njobs:\r\n  build:\r\n    steps:\r\n      - run: nix develop --command true\r\n      - uses: actions/checkout@" + probeSHA + "\r\n"
+	// job-level env: block, CRLF throughout (port spec §9.7's concern,
+	// checked the other direction from shaPinFindings: a CRLF line must
+	// still match ciCGOPattern's trailing \b).
+	content := "name: ci\r\njobs:\r\n  build:\r\n    env:\r\n      CGO_ENABLED: \"0\"\r\n    steps:\r\n      - run: nix develop --command true\r\n      - uses: actions/checkout@" + probeSHA + "\r\n"
 	mustWriteFile(t, dir, ".github/workflows/ci.yml", content)
+}
+
+// generateC11CIProbe is step-37's new probe: a repo whose Makefile and
+// flake.nix both correctly set CGO_ENABLED, but whose ci.yml does not —
+// isolating the new C1.1 CI sub-check's finding (and pinning where it
+// sits in the output) from every other condition. The ci.yml itself runs
+// through 'nix develop --command' and SHA-pins its one action, so it
+// trips no C6.5 finding of its own; only "no release.yml" fires under
+// C6.5.
+func generateC11CIProbe(t *testing.T, dir string) {
+	t.Helper()
+	mustMkdirAll(t, filepath.Join(dir, ".github", "workflows"))
+	mustWriteFile(t, dir, "Makefile", "CGO_ENABLED=0\n")
+	mustWriteFile(t, dir, "flake.nix", "{ CGO_ENABLED = 0; }\n")
+	mustWriteFile(t, dir, ".github/workflows/ci.yml",
+		"name: ci\njobs:\n  build:\n    steps:\n      - run: nix develop --command true\n      - uses: actions/checkout@"+probeSHA+"\n")
 }
 
 func generatePrettyjsonProbe(t *testing.T, dir string) {

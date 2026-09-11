@@ -158,7 +158,7 @@ func TestCheck_CleanRepo(t *testing.T) {
 	mustWrite(t, repo, ".envrc", "use flake\n")
 	mustWrite(t, repo, ".golangci.yml", "version: \"2\"\nlinters:\n  default: none\n  settings:\n    forbidigo:\n      forbid:\n        - pattern: 'fmt\\.Print('\n")
 	mustWrite(t, repo, "cliff.toml", `tag_pattern = "v[0-9]*"`+"\n")
-	mustWrite(t, repo, ".github/workflows/ci.yml", "jobs:\n  build:\n    steps:\n      - run: nix develop --command make check\n")
+	mustWrite(t, repo, ".github/workflows/ci.yml", "jobs:\n  build:\n    steps:\n      - run: nix develop --command make check\n      - run: CGO_ENABLED=0 go build ./...\n")
 	mustWrite(t, repo, ".github/workflows/release.yml", "jobs:\n  build:\n    steps:\n      - run: nix develop --command make build\n")
 	mustWrite(t, repo, "contrib/check-commit-msg", "#!/usr/bin/env bash\n")
 	mustWrite(t, repo, ".pre-commit-config.yaml", "repos:\n  - hooks:\n      - id: commit-msg\n")

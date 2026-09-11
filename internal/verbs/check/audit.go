@@ -40,7 +40,7 @@ func Audit(repo string) (findings []Finding, notes []string) {
 	a := &auditor{repo: repo}
 
 	tool := a.toolName()    // §4.1 step 1
-	a.cgoEnabled()          // §4.1 step 2
+	a.cgoEnabled()          // §4.1 step 2, extended to CI by step-37 (CONTRACT.md C1.1)
 	a.flakeAndEnvrc()       // §4.1 step 3
 	a.forbidigo()           // §4.1 step 4
 	a.manifestVerb(tool)    // §4.1 step 5
@@ -144,12 +144,32 @@ func (a *auditor) toolName() string {
 // `CGO_ENABLED *= *0|env\.CGO_ENABLED *= *0` (port spec §4.1 step 2).
 var cgoFlakePattern = regexp.MustCompile(`CGO_ENABLED *= *0|env\.CGO_ENABLED *= *0`)
 
-// cgoEnabled reproduces the oracle's C1.1 checks (port spec §4.1 step 2).
-// Two independent sub-checks: Makefile (missing file is its own finding;
-// present but lacking the string is a different one), then, only if
-// flake.nix exists, its CGO_ENABLED pattern. A missing flake.nix produces
-// no C1.1 finding at all here — that gap is covered, under a different
-// clause label, by flakeAndEnvrc below (§4.1 step 2/3).
+// ciCGOPattern is step-37's C1.1 CI pattern. It accepts either a shell
+// assignment (`CGO_ENABLED=0`, the form a `run:` step uses) or a YAML env
+// mapping (`CGO_ENABLED: 0`, unquoted or quoted with either quote style,
+// the form a job- or step-level `env:` block uses) — both are legitimate
+// ways to set the variable in a GitHub Actions workflow, and a
+// fixed-string test would misreport the YAML form as non-conformant
+// (port spec §1: never misreport conformance). The trailing \b rejects
+// CGO_ENABLED=01 while still matching before a CRLF line's \r.
+var ciCGOPattern = regexp.MustCompile(`CGO_ENABLED(=|: *)["']?0\b`)
+
+// cgoEnabled reproduces the oracle's C1.1 Makefile/flake.nix checks (port
+// spec §4.1 step 2), then extends them to CI (step-37, CONTRACT.md C1.1's
+// widened marker). "CI" means .github/workflows/ci.yml: C6.5 names
+// ci.yml as CI and says CI never publishes, while release.yml is the
+// release workflow (C6.4) and builds through `make cross-compile`, which
+// the Makefile sub-check above already covers.
+//
+// Three independent sub-checks, in this order so the pre-existing finding
+// order is preserved: Makefile (missing file is its own finding; present
+// but lacking the string is a different one); flake.nix, only if it
+// exists (a missing flake.nix produces no C1.1 finding at all here —
+// that gap is covered, under a different clause label, by flakeAndEnvrc
+// below); ci.yml, only if it exists — a missing ci.yml produces no C1.1
+// finding either, since workflows below already reports "C6.5: no
+// .github/workflows/ci.yml". A missing file is reported once, under the
+// clause that owns its existence.
 func (a *auditor) cgoEnabled() {
 	if a.isFile("Makefile") {
 		if !bytes.Contains(a.read("Makefile"), []byte("CGO_ENABLED=0")) {
@@ -161,6 +181,12 @@ func (a *auditor) cgoEnabled() {
 	if a.isFile("flake.nix") {
 		if !cgoFlakePattern.Match(a.read("flake.nix")) {
 			a.find("C1.1", "flake.nix does not set CGO_ENABLED = 0")
+		}
+	}
+	ciPath := filepath.Join(".github", "workflows", "ci.yml")
+	if a.isFile(ciPath) {
+		if !ciCGOPattern.Match(a.read(ciPath)) {
+			a.find("C1.1", "ci.yml does not set CGO_ENABLED=0")
 		}
 	}
 }
