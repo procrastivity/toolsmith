@@ -423,15 +423,9 @@ var internalTextExemptions = []textExemption{
 	},
 	{
 		path:        "harness/claudecode/claudecode.go",
-		present:     "// pair is a tension with the clause rather than a conformance to it —\n// see the Stage 6 finding on the toolname-binary Matter.\n",
-		replacement: "// pair is a tension with the clause rather than a conformance to it.\n",
+		present:     "// conformance to it — see the Stage 6 finding on the toolname-binary\n// Matter.\n",
+		replacement: "// conformance to it.\n",
 		reason:      "toolsmith's copy carries one extra sentence in the package comment citing the toolsmith-binary Matter; a generated tool must not cite toolsmith's own Matter register",
-	},
-	{
-		path:        "harness/claudecode/claudecode.go",
-		present:     "const skillDescription = \"Instantiate the toolname chassis for a new procrastivity-style CLI tool, or audit an existing tool repo against the toolname contract.\"\n",
-		replacement: "// TODO(toolname): replace with one line saying when to reach for this\n// tool — Claude reads it to decide when to load the skill.\nconst skillDescription = \"Drive toolname through its plumbing verb surface.\"\n",
-		reason:      "the skeleton keeps a TODO(toolname) marker and a placeholder skillDescription; toolsmith's copy carries its own real one-line description instead",
 	},
 }
 
@@ -458,6 +452,7 @@ var rootExcludedPairs = []excludedPair{
 	{path: "README.md", marker: "TODO(toolname)", reason: "per-tool prose (C7.5); the skeleton's copy is a TODO scaffold and toolsmith's is the project front page, with no chassis behavior in either"},
 	{path: "assets/agent-guidance.md", marker: "TODO(toolname)", reason: "whole-file placeholder: the skeleton's content is the instruction for what to write"},
 	{path: "assets/templates/skills/claude-code/judgment.md", marker: "TODO(toolname)", reason: "whole-file placeholder: the per-harness judgment prose each tool writes for itself"},
+	{path: "assets/templates/skills/claude-code/description.txt", marker: "TODO(toolname)", reason: "whole-file placeholder: the SKILL.md frontmatter description (C4.4), this harness's own one-line trigger sentence each tool writes for itself"},
 }
 
 var rootTextExemptions = []textExemption{

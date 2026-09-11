@@ -1,0 +1,1 @@
+Instantiate the toolsmith chassis for a new procrastivity-style CLI tool, or audit an existing tool repo against the toolsmith contract.

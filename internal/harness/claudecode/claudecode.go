@@ -2,15 +2,18 @@
 // directory plus a .claude-plugin/plugin.json in the same directory — the
 // "skills-dir as plugin" mechanism: no marketplace manifest, no separate
 // registry entry. Everything in the generated tree traces back to the
-// manifest except four verbatim, hand-authored strings. Two ride the
-// asset chain as C4.4 describes: the per-harness judgment paragraph
-// (this harness's own to revise) and the shared agent-guidance
-// paragraph (shared across every future harness target, and not this
-// package's to rewrite). Two do not: the one-line skillDescription
-// below, and renderPluginJSON's fixed "...'s own generated plumbing-verb
-// skill." suffix. C4.4's text names only the first pair, so the second
-// pair is a tension with the clause rather than a conformance to it —
-// see the Stage 6 finding on the toolsmith-binary Matter.
+// manifest except one verbatim, hand-authored string: renderPluginJSON's
+// fixed "...'s own generated plumbing-verb skill." suffix. Three other
+// hand-authored strings ride the asset chain as C4.4 describes: the
+// per-harness judgment paragraph (this harness's own to revise), the
+// shared agent-guidance paragraph (shared across every future harness
+// target, and not this package's to rewrite), and skillDescriptionAsset
+// below — this harness's own one-line trigger sentence, and the most
+// tunable of the three, since it decides whether an agent loads the
+// skill at all (C5.1). C4.4's text names only those three, so the
+// plugin.json suffix is a tension with the clause rather than a
+// conformance to it — see the Stage 6 finding on the toolsmith-binary
+// Matter.
 package claudecode
 
 import (
@@ -32,12 +35,14 @@ const Name = "claude-code"
 // skillName is the directory name the generated skill is installed under.
 const skillName = "toolsmith"
 
-// skillDescription is the SKILL.md frontmatter description: one sentence
-// naming the situations this skill triggers on, not the verbs it exposes
-// (those are generated, in the table below). Judgment prose by function,
-// short enough that it lives inline rather than riding the asset chain —
-// which is exactly the tension with C4.4 the package comment names.
-const skillDescription = "Instantiate the toolsmith chassis for a new procrastivity-style CLI tool, or audit an existing tool repo against the toolsmith contract."
+// skillDescriptionAsset is the SKILL.md frontmatter description: one
+// sentence naming the situations this skill triggers on, not the verbs it
+// exposes (those are generated, in the table below). Judgment prose by
+// function, resolved through the asset chain like judgmentAsset (C4.4)
+// rather than kept inline as a Go constant — it is the most tunable prose
+// in the projection, since it alone decides whether an agent loads the
+// skill at all (C5.1).
+const skillDescriptionAsset = "templates/skills/claude-code/description.txt"
 
 // judgmentAsset is the per-harness judgment paragraph, this harness's own
 // hand-authored prose, resolved through the asset chain (C4.4).
@@ -45,8 +50,8 @@ const judgmentAsset = "templates/skills/claude-code/judgment.md"
 
 // guidanceAsset is the shared agent-guidance paragraph, seeded at the top
 // level of the shipped asset tree and projected here verbatim. It is
-// hand-written like judgmentAsset and skillDescription, but it is shared
-// across every harness target rather than owned by this one.
+// hand-written like judgmentAsset and skillDescriptionAsset, but it is
+// shared across every harness target rather than owned by this one.
 const guidanceAsset = "agent-guidance.md"
 
 // SkillsDirEnv is an environment variable that, when set, overrides
@@ -113,6 +118,10 @@ func InstallDir() (string, error) {
 func Generate(m manifest.Manifest) (map[string][]byte, error) {
 	verbs := harness.Projectable(m.Verbs)
 
+	description, err := resolveSkillDescription()
+	if err != nil {
+		return nil, err
+	}
 	judgment, err := asset.Resolve(judgmentAsset)
 	if err != nil {
 		return nil, fmt.Errorf("claudecode: resolving judgment template: %w", err)
@@ -128,17 +137,38 @@ func Generate(m manifest.Manifest) (map[string][]byte, error) {
 	}
 
 	return map[string][]byte{
-		"SKILL.md":                   renderSkillMD(m, verbs, judgment.Bytes(), guidance.Bytes()),
+		"SKILL.md":                   renderSkillMD(m, verbs, description, judgment.Bytes(), guidance.Bytes()),
 		".claude-plugin/plugin.json": pluginJSON,
 	}, nil
 }
 
-func renderSkillMD(m manifest.Manifest, verbs []manifest.Verb, judgment, guidance []byte) []byte {
+// resolveSkillDescription resolves skillDescriptionAsset and returns the
+// value of SKILL.md's `description:` frontmatter key. That key holds one
+// line, so an empty or multi-line override is an error rather than broken
+// frontmatter. Rejected: joining the lines with spaces, which would install
+// a trigger sentence the override's author never wrote. Only trailing
+// whitespace, such as the newline a text file ends with, is trimmed.
+func resolveSkillDescription() (string, error) {
+	resolved, err := asset.Resolve(skillDescriptionAsset)
+	if err != nil {
+		return "", fmt.Errorf("claudecode: resolving skill description: %w", err)
+	}
+	desc := strings.TrimRight(string(resolved.Bytes()), "\n\r\t ")
+	if desc == "" {
+		return "", fmt.Errorf("claudecode: skill description asset %q is empty", skillDescriptionAsset)
+	}
+	if strings.ContainsAny(desc, "\n\r") {
+		return "", fmt.Errorf("claudecode: skill description asset %q must be a single line", skillDescriptionAsset)
+	}
+	return desc, nil
+}
+
+func renderSkillMD(m manifest.Manifest, verbs []manifest.Verb, description string, judgment, guidance []byte) []byte {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "---\n")
 	fmt.Fprintf(&b, "name: %s\n", skillName)
-	fmt.Fprintf(&b, "description: %s\n", skillDescription)
+	fmt.Fprintf(&b, "description: %s\n", description)
 	fmt.Fprintf(&b, "---\n\n")
 
 	fmt.Fprintf(&b, "# %s\n\n", m.Tool.Name)
