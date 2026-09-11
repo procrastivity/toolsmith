@@ -230,15 +230,78 @@ func destMode(skeleton fs.FS, rel string, data []byte, embedded bool) (os.FileMo
 	return 0o644, nil
 }
 
-// initGit reproduces the oracle's git-init sequence (port spec §4.2
-// step 8). Both of git's streams go to stderr, never to the verb's
-// stdout: the oracle lets git inherit the script's stdout, but C2.1 makes
-// stdout the verb's own, and -q means a successful run writes nothing to
-// either stream anyway. Port spec §5.2 already records that git's
-// silence is not hermetically guaranteed.
-func initGit(p params, errOut *bytes.Buffer) error {
+// lookPath is a test seam over exec.LookPath (C2.6).
+var lookPath = exec.LookPath
+
+// initGitRepo creates the target, runs `git init` in it, and checks that
+// git can resolve both an author and a committer identity there, before
+// any skeleton file is written. It exists so that a missing identity fails
+// up front, not at the commit after the whole tree is on disk
+// (evidence/2026-09-11-toolsmith-conformance.md §7).
+//
+// The identity check runs inside the new repository (`git -C`). Rejected:
+// checking from the process's working directory before `git init`. That
+// directory's local config can supply an identity the new repository will
+// not see (a false pass), and an `includeIf "gitdir:..."` identity matches
+// only inside the new repository (a false refusal). Also rejected: checking
+// GIT_COMMITTER_IDENT alone, which passes when only the committer is set
+// while `git commit` fails on the author.
+//
+// On a failure, initGitRepo removes the target. That is safe because
+// validate refused an existing target, so this call created it.
+func initGitRepo(p params, errOut *bytes.Buffer) error {
+	if _, err := lookPath("git"); err != nil {
+		return toolsmitherr.New("not-found.git",
+			"git is not on PATH; install it, or pass --no-git")
+	}
+
+	if err := os.MkdirAll(p.targetDir, 0o755); err != nil {
+		return internalErr("creating %q: %v", p.targetDir, err)
+	}
+
+	initCmd := exec.Command("git", "-C", p.targetDir, "init", "-q", "-b", "main")
+	initCmd.Stdout = errOut
+	initCmd.Stderr = errOut
+	if err := initCmd.Run(); err != nil {
+		_ = os.RemoveAll(p.targetDir)
+		return toolsmitherr.New("internal.git-failed",
+			fmt.Sprintf("git init failed in %s: %v", p.targetDir, err))
+	}
+
+	for _, v := range []string{"GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"} {
+		var stderr bytes.Buffer
+		cmd := exec.Command("git", "-C", p.targetDir, "var", v)
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			_ = os.RemoveAll(p.targetDir)
+			return toolsmitherr.New("not-found.git-identity",
+				fmt.Sprintf("git has no commit identity for %s (%s); set user.name and user.email, or pass --no-git",
+					p.targetDir, lastLine(stderr.String())))
+		}
+	}
+	return nil
+}
+
+// lastLine returns the last non-blank line of git's stderr. git explains an
+// identity failure over several lines and ends with the specific cause, and
+// the error message must stay one line (C2.5's human line).
+func lastLine(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	return strings.TrimSpace(lines[len(lines)-1])
+}
+
+// commitGit makes the first commit in the repository initGitRepo created.
+// Both of git's streams go to stderr, never to the verb's stdout: the
+// oracle (port spec §4.2 step 8) lets git inherit the script's stdout, but
+// C2.1 makes stdout the verb's own, and -q means a successful run writes
+// nothing to either stream anyway. Port spec §5.2 already records that
+// git's silence is not hermetically guaranteed.
+//
+// A failure here is internal.git-failed (exit 4): initGitRepo already
+// proved that git runs and has an identity in this repository, so the
+// failure is unexpected (C2.5).
+func commitGit(p params, errOut *bytes.Buffer) error {
 	steps := [][]string{
-		{"init", "-q", "-b", "main"},
 		{"add", "-A"},
 		{"commit", "-q", "-m", "chore: instantiate " + p.name + " from the toolsmith skeleton"},
 	}
@@ -247,7 +310,7 @@ func initGit(p params, errOut *bytes.Buffer) error {
 		cmd.Stdout = errOut
 		cmd.Stderr = errOut
 		if err := cmd.Run(); err != nil {
-			return toolsmitherr.New("new.git-failed",
+			return toolsmitherr.New("internal.git-failed",
 				fmt.Sprintf("git %s failed in %s: %v", strings.Join(args, " "), p.targetDir, err))
 		}
 	}

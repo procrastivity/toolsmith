@@ -2,10 +2,16 @@
 // contrib/new-tool.sh, retired at cutover (Stage 7 of toolsmith-binary).
 // docs/binary/port-spec.md records the script's behavior — cite it, not
 // the shell, for anything that isn't obvious from the code. It
-// instantiates the shipped chassis skeleton as a new tool: copy the tree,
+// instantiates the shipped chassis skeleton as a new tool: create the
+// repository and check git's identity in it (initGitRepo), copy the tree,
 // rename the placeholder paths, rewrite the three placeholder spellings,
-// restore the real module files, optionally make the first commit, and
+// restore the real module files, make the first commit (commitGit), and
 // print the checklist of judgment steps the rename cannot do.
+//
+// The repository comes first, not last as in the oracle (port spec §4.2
+// step 8), because only a check inside the new repository predicts whether
+// its commit will succeed (initGitRepo). Parity retired at cutover
+// (725e94e), so the order is free to change.
 //
 // The verb's real output is the produced directory tree, not stdout — its
 // only stdout is the trailing checklist (port spec §5.2, §9.2).
@@ -30,11 +36,15 @@ import (
 // Exit codes follow CONTRACT.md C2.4, not the oracle's flat 1 (port spec §1
 // judgment call 3, §9.3): Cobra's own path exits 2 for a bad flag, a
 // missing value, a missing name and a second positional argument; the
-// existing-target guard exits 3 as a refusal; every other failure exits 1.
-// The oracle's single exit code is an artifact of one die() helper with two
-// happy-path callers, and reproducing it would mean suppressing Cobra's
-// usage path to preserve an accident nobody observed. This divergence is
-// recorded as D3 in docs/binary/parity-divergences.md.
+// existing-target guard exits 3 as a refusal; validation.* and
+// not-found.* failures (a bad name, the placeholder name, git missing or
+// unidentified) exit 1; internal.* failures (internal.instantiate,
+// internal.skeleton-missing, internal.git-failed) exit 4, an unexpected
+// break rather than something the caller did. The oracle's single exit
+// code is an artifact of one die() helper with two happy-path callers, and
+// reproducing it would mean suppressing Cobra's usage path to preserve an
+// accident nobody observed. This divergence is recorded as D3 in
+// docs/binary/parity-divergences.md.
 func Command(streams *iostreams.Streams) *cobra.Command {
 	var (
 		targetDir string
@@ -59,20 +69,31 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 				return err
 			}
 
+			// gitStep runs one git phase and passes git's own output to
+			// stderr (commitGit's comment says why not stdout).
+			var gitOut bytes.Buffer
+			gitStep := func(step func(params, *bytes.Buffer) error) error {
+				stepErr := step(p, &gitOut)
+				if _, err := streams.Err.Write(gitOut.Bytes()); err != nil {
+					return err
+				}
+				gitOut.Reset()
+				return stepErr
+			}
+
+			if p.doGit {
+				if err := gitStep(initGitRepo); err != nil {
+					return err
+				}
+			}
+
 			if err := instantiate(p, skeleton, embedded); err != nil {
 				return err
 			}
 
 			if p.doGit {
-				var gitOut bytes.Buffer
-				gitErr := initGit(p, &gitOut)
-				if gitOut.Len() > 0 {
-					if _, err := streams.Err.Write(gitOut.Bytes()); err != nil {
-						return err
-					}
-				}
-				if gitErr != nil {
-					return gitErr
+				if err := gitStep(commitGit); err != nil {
+					return err
 				}
 			}
 

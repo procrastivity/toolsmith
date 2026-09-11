@@ -1,6 +1,7 @@
 package new
 
 import (
+	"bytes"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -162,6 +163,132 @@ func TestSkeletonHooksAreExecutable(t *testing.T) {
 	}
 	for _, path := range missing {
 		t.Errorf("%s is executable in the skeleton but has no shebang, so an instantiation from the embedded asset link would write it non-executable", path)
+	}
+}
+
+// noIdentityEnv makes git's identity resolution deterministically negative,
+// regardless of the host. A bare "unset everything" is not deterministic:
+// git then falls back to a GECOS name and a hostname-derived email, which
+// succeeds or fails depending on whether the hostname has a domain (on
+// this host it does not, so git fails; a CI runner's hostname commonly
+// does have one, so the same bare unset would succeed there —
+// evidence/2026-09-11-toolsmith-conformance.md §7). Pointing
+// GIT_CONFIG_GLOBAL at a file that sets user.useConfigOnly with no
+// user.email disables that fallback outright (the probe behind ruling R2
+// confirmed this), and GIT_CONFIG_NOSYSTEM=1 removes the system config
+// layer. What remains is GIT_CONFIG_GLOBAL and any local repository
+// config, so the caller must run from a directory with no local git
+// config — a fresh t.TempDir(), never this repository's own tree — for
+// the result to be deterministic.
+func noIdentityEnv(t *testing.T) {
+	t.Helper()
+	cfg := filepath.Join(t.TempDir(), "gitconfig")
+	if err := os.WriteFile(cfg, []byte("[user]\n\tuseConfigOnly = true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_CONFIG_GLOBAL", cfg)
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	unsetenv(t, "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "EMAIL")
+}
+
+// presentIdentityEnv is noIdentityEnv's opposite: every config layer git
+// could read is either disabled or pinned to an explicit, non-host value,
+// so the identity initGitRepo sees can never come from the host running
+// the test.
+func presentIdentityEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("GIT_AUTHOR_NAME", "Test Author")
+	t.Setenv("GIT_AUTHOR_EMAIL", "author@example.invalid")
+	t.Setenv("GIT_COMMITTER_NAME", "Test Committer")
+	t.Setenv("GIT_COMMITTER_EMAIL", "committer@example.invalid")
+}
+
+// unsetenv unsets each key for the test's duration and restores its prior
+// value, or its prior absence, afterward. t.Setenv cannot express
+// "absent", only "set to this string", and an empty string is not the
+// same thing to git: GIT_AUTHOR_NAME="" fails identity resolution with
+// "empty ident name", a different failure than the unset case
+// noIdentityEnv needs.
+func unsetenv(t *testing.T, keys ...string) {
+	t.Helper()
+	for _, k := range keys {
+		old, had := os.LookupEnv(k)
+		if err := os.Unsetenv(k); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if had {
+				_ = os.Setenv(k, old)
+			} else {
+				_ = os.Unsetenv(k)
+			}
+		})
+	}
+}
+
+// TestInitGitRepo_GitAbsent pins not-found.git: PATH points at an empty
+// directory, so exec.LookPath("git") fails as it would on a host with no
+// git, and the target is never created.
+func TestInitGitRepo_GitAbsent(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	t.Setenv("PATH", t.TempDir())
+
+	target := filepath.Join(dir, "acme")
+	var out bytes.Buffer
+	err := initGitRepo(params{name: "acme", targetDir: target}, &out)
+	var terr *toolsmitherr.Error
+	if !asToolsmithErr(err, &terr) || terr.Code != "not-found.git" {
+		t.Fatalf("initGitRepo() = %v, want code not-found.git", err)
+	}
+	if _, statErr := os.Stat(target); statErr == nil {
+		t.Error("target exists after a git-absent refusal")
+	}
+}
+
+// TestInitGitRepo_IdentityAbsent pins not-found.git-identity and the
+// cleanup: `git init` succeeds, neither identity resolves inside the new
+// repository, and initGitRepo removes the target it created. The message
+// must stay one line.
+func TestInitGitRepo_IdentityAbsent(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	noIdentityEnv(t)
+
+	target := filepath.Join(dir, "acme")
+	var out bytes.Buffer
+	err := initGitRepo(params{name: "acme", targetDir: target}, &out)
+
+	var terr *toolsmitherr.Error
+	if !asToolsmithErr(err, &terr) || terr.Code != "not-found.git-identity" {
+		t.Fatalf("initGitRepo() = %v, want code not-found.git-identity", err)
+	}
+	if strings.Contains(terr.Message, "\n") {
+		t.Errorf("message spans more than one line: %q", terr.Message)
+	}
+	if _, statErr := os.Stat(target); statErr == nil {
+		t.Error("target exists after an identity refusal; initGitRepo must remove what it created")
+	}
+}
+
+// TestInitGitRepo_IdentityPresent is the probe's positive case: with both
+// GIT_AUTHOR_IDENT and GIT_COMMITTER_IDENT resolvable inside the freshly
+// initialized repository, initGitRepo passes and leaves a real .git
+// behind.
+func TestInitGitRepo_IdentityPresent(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	presentIdentityEnv(t)
+
+	target := filepath.Join(dir, "acme")
+	var out bytes.Buffer
+	if err := initGitRepo(params{name: "acme", targetDir: target}, &out); err != nil {
+		t.Fatalf("initGitRepo() = %v, want nil with an explicit identity", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(target, ".git")); statErr != nil {
+		t.Errorf("expected a .git directory in %s: %v", target, statErr)
 	}
 }
 
