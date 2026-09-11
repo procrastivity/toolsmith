@@ -1,4 +1,4 @@
-# The toolsmith contract — v1.1
+# The toolsmith contract — v1.2
 
 **Status: normative.** This document is the cross-tool contract for
 procrastivity-style CLI tools. A tool that conforms declares
@@ -74,7 +74,8 @@ marked **[check]** are mechanically verifiable.
   mechanical: **[check]** `.golangci.yml` carries the forbidigo rules
   banning `fmt.Print(`, `fmt.Println(`, `fmt.Printf(`.
 - **C2.2** stdout carries exactly one thing: the payload. Diagnostics
-  go to stderr. On failure, stdout is empty.
+  go to stderr. On failure, stdout is empty, except for the findings
+  verdict that C2.5 sanctions.
 - **C2.3** Two global flags, bound once at root and never redeclared by
   a verb: `--json` (emit the success payload as one JSON value) and
   `-v/--verbose` (extra diagnostic lines on stderr).
@@ -87,7 +88,12 @@ marked **[check]** are mechanically verifiable.
 - **C2.5** One structured error type: `<tool>err.Error{Code, Message}`
   where `Code` is a dotted machine token (`refusal.*`, `validation.*`,
   `not-found.*`, `advisory.*`, `internal.*`). Exit codes map from the
-  code prefix, not from Go types. One `Render` produces the human line
+  code prefix, not from Go types. Exactly one form outside the five
+  prefixes is sanctioned: `<verb>.findings-present`, exit 1, for a verb
+  whose run completed and whose own findings are the verdict (`doctor`
+  under C4.7, the conformance checker under T21). Such a verb's findings
+  stay on stdout as its payload, and the error is the verdict about them
+  (T26). One `Render` produces the human line
   (`<tool>: <verb>: <message>`) and the `{"error":{code,message}}`
   envelope from the same value — no second code path that could
   diverge. Root sets `SilenceUsage`/`SilenceErrors`; cobra never prints.
@@ -305,6 +311,7 @@ would be invention.
 |---|---|---|
 | v1.0 | C1.1–C7.5 as extracted | The body proven by wip, duo and ste9. |
 | v1.1 | C3.8 (T23) | Each verb records its positional-argument usage. The first additive clause after T20; it is what exposed that the document had nowhere to record a minor (T24). |
+| v1.2 | C2.5's `<verb>.findings-present` form (T26) | A verb whose findings are its verdict has a sanctioned error code, and its findings stay on stdout. wip, duo, ste9 and every tool `new` produced already emit `doctor.findings-present`, so they conform with no change. |
 
 A tool's declared string does not move with this table (T24) — see
 **Versioning** above.
