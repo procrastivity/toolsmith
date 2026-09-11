@@ -9,9 +9,9 @@ Stages, Steps and findings live there. This file records what building the
 Matter forced that CONTRACT.md does not say (C7.1).
 
 **Status: reconciliation pass complete, read against CONTRACT.md v1.2 at
-`44cba9d`.** The five divergences this Matter took on are closed. The pass
-found two more that predate this Matter. Each is on the backlog, and neither
-blocks the seal (§2.3).
+`44cba9d`, and amended at step-19.** The five divergences this Matter took
+on are closed. The pass and the conformance run found three more that
+predate this Matter. Each is on the backlog, and none blocks the seal (§2.3).
 
 ---
 
@@ -193,8 +193,8 @@ did not touch keep their verdicts from `docs/binary/decisions.md` §1.
 
 ### 2.3 Diverges
 
-Neither divergence comes from this Matter's changes. Both are chassis code
-that the toolsmith-binary pass read as holding.
+None of these divergences comes from this Matter's changes. All three are
+chassis code that the toolsmith-binary pass read as holding.
 
 - **C2.2 (chassis).** Bare `install` writes its per-target results to
   stdout and then returns `refusal.harness-targets-refused` when any target
@@ -209,6 +209,13 @@ that the toolsmith-binary pass read as holding.
   package, because the registry row's `Uninstall func()` takes no policy
   input. Step-15 split the codes where they were and did not move them
   (§1.6). **Disposition:** backlog `01M279NRVB1R4QE5Q9BW2NT204`.
+- **C2.4 (chassis), found at step-19.** `cli.Execute` assumes that an error
+  which is not a `toolsmitherr.Error` came from Cobra's argument parsing, and
+  exits 2. Verbs also return plain errors, such as I/O and asset failures,
+  and those exit 2 as usage where C2.4 means 4. The conformance run hit it
+  through a malformed description override, the one path this Matter added,
+  and step-21 fixed that path. **Disposition:** backlog
+  `01M27ACVAM9D3SZSAXZDMZTKQX`.
 
 ## 3. `[check]` markers beside what the checker reads
 
@@ -249,7 +256,7 @@ previous pass, `docs/binary/decisions.md`, read against v1.1.
 toolsmith and its skeleton hold C2.3, C2.5, C4.2, C4.4 and C4.5 at
 contract v1.2. Those are the five divergences toolsmith-binary left open,
 and each note in `docs/binary/decisions.md` §2 carries its resolution.
-Every clause this Matter touched is read against v1.2 in §2. Two older
-chassis divergences, C2.2 in bare `install` and C4.3 in `uninstall`, are
-recorded with backlog entries and are not fixed here. The conformance run
-against v1.2 is recorded in `evidence/`.
+Every clause this Matter touched is read against v1.2 in §2. Three older
+chassis divergences, C2.2 in bare `install`, C4.3 in `uninstall` and C2.4
+in `cli.Execute`, are recorded with backlog entries and are not fixed here.
+The conformance run against v1.2 is `evidence/2026-09-11-contract-v1.2.md`.
