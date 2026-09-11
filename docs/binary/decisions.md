@@ -197,6 +197,8 @@ got different answers, because only one of them is prose.
   requirement, so the contract version does not move.
 
 Both package comments lost the "tension" wording, and they now cite T27.
+A malformed override of the description refuses with
+`validation.skill-description` (contract-v1-2-reconcile step-21).
 
 ### C4.5 — only `current` of the six drift states is produced (chassis, contract)
 

@@ -147,6 +147,12 @@ toolsmith's chassis moved its copy to
 wip better than six copies, which item 6's copied `install.go` already
 shows the cost of.
 
+An override of that asset must be one non-empty line, because the
+frontmatter key holds one line. toolsmith refuses a malformed override with
+`validation.skill-description`, with exit 1 (contract-v1-2-reconcile
+step-21). Port that check with the asset. A plain error there exits 2
+through the usage fallback in `cli.Execute`, which wip's `execute.go` shares.
+
 claude-code's `plugin.json` suffix, `"%s's own generated plumbing-verb
 skill."`, conforms under T27 as it is.
 
