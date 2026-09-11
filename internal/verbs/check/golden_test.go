@@ -22,6 +22,7 @@ package check_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -31,6 +32,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -45,6 +47,7 @@ import (
 	// output is the embedded skeleton.
 	_ "github.com/procrastivity/toolsmith/assets"
 	_ "github.com/procrastivity/toolsmith/internal/cli"
+	"github.com/procrastivity/toolsmith/internal/verbs/check"
 )
 
 var updateGolden = flag.Bool("update", false, "write testdata/golden/check/*.stdout|stderr from the current run instead of comparing to it")
@@ -785,4 +788,146 @@ func TestGoldenCheckStaleFiles(t *testing.T) {
 			t.Errorf("case %q has no golden %s.stderr", n, n)
 		}
 	}
+}
+
+// checkJSONOutput mirrors check --json's stdout shape without depending on
+// the check package's own (unexported) json struct tags.
+type checkJSONOutput struct {
+	Findings []struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"findings"`
+	Audited []string `json:"audited"`
+}
+
+// decodeOneJSONValue requires stdout to be exactly one JSON value plus the
+// trailing newline check.go itself writes — never two values, and never
+// trailing garbage a looser Unmarshal would silently ignore.
+func decodeOneJSONValue(t *testing.T, stdout string) checkJSONOutput {
+	t.Helper()
+	if !strings.HasSuffix(stdout, "\n") {
+		t.Fatalf("stdout does not end with a newline: %q", stdout)
+	}
+	dec := json.NewDecoder(strings.NewReader(stdout))
+	var out checkJSONOutput
+	if err := dec.Decode(&out); err != nil {
+		t.Fatalf("decoding stdout as JSON: %v\nstdout: %q", err, stdout)
+	}
+	if dec.More() {
+		t.Fatalf("stdout carries more than one JSON value: %q", stdout)
+	}
+	return out
+}
+
+func findCheckCase(t *testing.T, name string) checkCase {
+	t.Helper()
+	for _, c := range checkCases(t) {
+		if c.name == name {
+			return c
+		}
+	}
+	t.Fatalf("checkCases: no case named %q", name)
+	return checkCase{}
+}
+
+// TestCheckJSON is an e2e check (not a byte-for-byte golden, since JSON
+// key order is not itself part of the contract) that check --json emits
+// doctor's payload shape plus `audited` (CONTRACT.md C2.3, T21, T24), and
+// that the findings-present verdict still renders as the {"error":...}
+// envelope on stderr with the same exit code as the text path.
+func TestCheckJSON(t *testing.T) {
+	wantAudited := append([]string(nil), check.AuditedClauses()...)
+	sort.Strings(wantAudited)
+
+	t.Run("clean", func(t *testing.T) {
+		tc := findCheckCase(t, "corpus-toolsmith")
+		dir := t.TempDir()
+		tc.setup(t, dir)
+
+		env, _ := envForCase(t, tc)
+		stdout, stderr, exit := runBin(t, dir, env, "check", "--json", dir)
+		if exit != 0 {
+			t.Fatalf("exit = %d, want 0; stdout=%q stderr=%q", exit, stdout, stderr)
+		}
+
+		out := decodeOneJSONValue(t, stdout)
+		if len(out.Findings) != 0 {
+			t.Errorf("findings = %v, want none", out.Findings)
+		}
+		if !strings.Contains(stdout, `"findings":[]`) {
+			t.Errorf("stdout = %q, want a literal [] for findings, never null", stdout)
+		}
+		if !slices.Equal(out.Audited, wantAudited) {
+			t.Errorf("audited = %v, want %v", out.Audited, wantAudited)
+		}
+		if !cleanRunStderr.MatchString(normalizeRepo(t, stderr, dir)) {
+			t.Errorf("clean --json run wrote stderr other than the §9.4 note: %q", stderr)
+		}
+	})
+
+	// probe-multicmd is clean (exit 0) but fires the §9.4 note, so this
+	// covers the note surviving unchanged under --json too.
+	t.Run("clean with note", func(t *testing.T) {
+		tc := findCheckCase(t, "probe-multicmd")
+		dir := t.TempDir()
+		tc.setup(t, dir)
+
+		env, _ := envForCase(t, tc)
+		stdout, stderr, exit := runBin(t, dir, env, "check", "--json", dir)
+		if exit != 0 {
+			t.Fatalf("exit = %d, want 0; stdout=%q stderr=%q", exit, stdout, stderr)
+		}
+		out := decodeOneJSONValue(t, stdout)
+		if len(out.Findings) != 0 {
+			t.Errorf("findings = %v, want none", out.Findings)
+		}
+		wantStderr := "note: multiple cmd/ entries (aaa bbb); auditing as \"aaa\"\n"
+		if stderr != wantStderr {
+			t.Errorf("stderr = %q, want %q", stderr, wantStderr)
+		}
+	})
+
+	t.Run("findings", func(t *testing.T) {
+		tc := findCheckCase(t, "corpus-duo")
+		dir := t.TempDir()
+		tc.setup(t, dir)
+
+		textEnv, _ := envForCase(t, tc)
+		textStdout, _, textExit := runBin(t, dir, textEnv, "check", dir)
+		if textExit != 1 {
+			t.Fatalf("text run: exit = %d, want 1; stdout=%q", textExit, textStdout)
+		}
+		var wantFindings []struct{ Code, Message string }
+		for _, line := range strings.Split(strings.TrimRight(textStdout, "\n"), "\n") {
+			clause, msg, ok := strings.Cut(line, ": ")
+			if !ok {
+				t.Fatalf("text finding line has no clause prefix: %q", line)
+			}
+			wantFindings = append(wantFindings, struct{ Code, Message string }{clause, msg})
+		}
+
+		jsonEnv, _ := envForCase(t, tc)
+		jsonStdout, jsonStderr, jsonExit := runBin(t, dir, jsonEnv, "check", "--json", dir)
+		if jsonExit != 1 {
+			t.Fatalf("--json run: exit = %d, want 1; stdout=%q", jsonExit, jsonStdout)
+		}
+
+		out := decodeOneJSONValue(t, jsonStdout)
+		if len(out.Findings) != len(wantFindings) {
+			t.Fatalf("--json findings count = %d, want %d (the text run's line count)", len(out.Findings), len(wantFindings))
+		}
+		for i, f := range out.Findings {
+			if f.Code != wantFindings[i].Code || f.Message != wantFindings[i].Message {
+				t.Errorf("finding %d = %+v, want %+v", i, f, wantFindings[i])
+			}
+		}
+		if !slices.Equal(out.Audited, wantAudited) {
+			t.Errorf("audited = %v, want %v", out.Audited, wantAudited)
+		}
+
+		wantStderr := fmt.Sprintf(`{"error":{"code":"check.findings-present","message":"%d finding(s) for $REPO"}}`+"\n", len(wantFindings))
+		if got := normalizeRepo(t, jsonStderr, dir); got != wantStderr {
+			t.Errorf("stderr = %q, want %q", got, wantStderr)
+		}
+	})
 }

@@ -9,16 +9,37 @@
 package check
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/spf13/cobra"
 
+	"github.com/procrastivity/toolsmith/internal/cliflags"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
 	"github.com/procrastivity/toolsmith/internal/surface"
 	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 )
+
+// jsonFinding mirrors doctor's checks.Finding shape (C2.3: every verb
+// accepts --json; T21: the checker's payload matches a tool's doctor) —
+// defined locally rather than importing internal/checks, which is
+// doctor's own check registry, not a general finding type.
+type jsonFinding struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// jsonOutput is check --json's one stdout value. Audited names the
+// clause IDs the checker itself claims to cover (T24) — present on both
+// the clean and findings-present runs, and distinct from any tool's own
+// declared conformance.
+type jsonOutput struct {
+	Findings []jsonFinding `json:"findings"`
+	Audited  []string      `json:"audited"`
+}
 
 // Command constructs the `toolsmith check [path]` verb. streams is the
 // writer pair threaded in at construction (C2.1).
@@ -36,7 +57,8 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 		Long: "audit a tool repo against the mechanical ([check]-marked) clauses of CONTRACT.md.\n\n" +
 			"path defaults to the current directory. Findings are printed flat, one \"<clause>: <message>\" line each, exhaustively — every failing clause, never just the first.",
 		Args: cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			flags := cliflags.FromContext(cmd.Context())
 			path := "."
 			if len(args) == 1 {
 				path = args[0]
@@ -83,6 +105,28 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 					return err
 				}
 			}
+
+			if flags.JSON {
+				out := jsonOutput{
+					Findings: make([]jsonFinding, 0, len(findings)),
+					// AuditedClauses() is already sorted; copy and sort
+					// again so this stays true even if that changes.
+					Audited: append([]string(nil), AuditedClauses()...),
+				}
+				sort.Strings(out.Audited)
+				for _, f := range findings {
+					out.Findings = append(out.Findings, jsonFinding{Code: f.Clause, Message: f.Message})
+				}
+				b, err := json.Marshal(out)
+				if err != nil {
+					return err
+				}
+				if _, err := fmt.Fprintln(streams.Out, string(b)); err != nil {
+					return err
+				}
+				return findingsVerdict(findings, repo)
+			}
+
 			for _, f := range findings {
 				if _, err := fmt.Fprintf(streams.Out, "%s: %s\n", f.Clause, f.Message); err != nil {
 					return err
@@ -92,14 +136,21 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 				_, err := fmt.Fprintf(streams.Out, "no findings — mechanical clauses hold for %s\n", repo)
 				return err
 			}
-			// The finding lines above are the payload, and this error is
-			// the verdict about them (C2.5, T26): Render writes it to stderr
-			// as one line and the exit is 1, as for doctor. Rejected:
-			// exitcode.Silent, which served the parity oracle retired at
-			// cutover (725e94e) and would keep the verdict out of --json.
-			return toolsmitherr.New("check.findings-present", fmt.Sprintf("%d finding(s) for %s", len(findings), repo))
+			return findingsVerdict(findings, repo)
 		},
 	}
 	surface.Annotate(cmd, surface.Plumbing)
 	return cmd
+}
+
+// findingsVerdict returns nil on a clean run, else the verdict about the
+// findings already written to stdout above (C2.5): Render writes it to
+// stderr as one line and the exit is 1, as for doctor. Rejected:
+// exitcode.Silent, which served the parity oracle retired at cutover
+// (725e94e) and would keep the verdict out of --json.
+func findingsVerdict(findings []Finding, repo string) error {
+	if len(findings) == 0 {
+		return nil
+	}
+	return toolsmitherr.New("check.findings-present", fmt.Sprintf("%d finding(s) for %s", len(findings), repo))
 }
