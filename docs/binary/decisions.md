@@ -13,8 +13,8 @@ Stage 8 and CONTRACT.md's Conformance section ask for.
 **Status: reconciliation pass complete, read against CONTRACT.md v1.1 at
 `4e645c6`, and amended at step-29.** Six clauses diverge. This file closes
 one of them (C7.1). The other five are recorded with a disposition and are
-not fixed by this pass. Separately, eight `[check]` markers claim more than
-the checker reads (§3).
+not fixed by this pass. Separately, eight `[check]` markers claimed more
+than the checker reads, and step-38 narrowed them (§3).
 
 ---
 
@@ -218,9 +218,9 @@ compares clause IDs, not extents. The origin is the contract: the marks
 were placed at clause level before the Conformance rule said where a mark
 sits.
 
-**Disposition:** step-38 narrows each marker to the sub-part the checker
-reads, in C1.2's and C3.4's parenthetical shape. No checker behavior
-changes.
+**Disposition:** step-38 narrowed all eight markers to the sub-part the
+checker reads, in C3.4's parenthetical shape. No checker behavior
+changed.
 
 ## 4. The contract minor this pass read against
 
@@ -237,7 +237,7 @@ beside T24's derived-conformance entry, `01M2696J6ECKMW3M7158GK5SMA`.
 
 toolsmith holds every clause it can be read against except C2.3, C2.5,
 C4.2, C4.4 and C4.5. Each of the five is on the backlog with the choice it
-needs. Step-38 narrows the eight overclaiming markers.
+needs. The eight overclaiming markers are narrowed at step-38.
 
 None of this blocks the Matter's seal. The seal asks for three things:
 `toolsmith check .` clean on toolsmith, the oracles and the gate deleted in

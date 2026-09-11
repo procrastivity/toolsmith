@@ -43,10 +43,10 @@ marked **[check]** are mechanically verifiable.
   regardless of later dependency choices. If the tool needs SQLite, this
   constrains the driver to a pure-Go implementation (modernc.org/sqlite),
   never mattn/go-sqlite3.
-- **C1.2** **[check]** (that `cmd/<tool>` exists as a main package)
-  `cmd/<tool>/main.go` does nothing beyond constructing
-  streams and build info, calling the root command, and mapping the
-  result to an exit code (~30 lines).
+- **C1.2** **[check]** (that `cmd/` holds a `<tool>` directory, not
+  that it is a main package) `cmd/<tool>/main.go` does nothing beyond
+  constructing streams and build info, calling the root command, and
+  mapping the result to an exit code (~30 lines).
 - **C1.3** `internal/cli/root.go` is the single registration point. It
   is the only place any verb package gets imported. No `init()` side
   effects anywhere else.
@@ -55,11 +55,13 @@ marked **[check]** are mechanically verifiable.
   Domain packages sit beside `verbs/`, never inside it.
 - **C1.5** Dependencies stay deliberately tiny. Adding one is a
   decision, not a convenience.
-- **C1.6** **[check]** The repo carries `flake.nix` (buildGoModule,
-  nixos release channel, flake-utils) and `.envrc` (nix guard that
-  soft-fails with an installer hint, then `use flake`). The flake's
-  `postInstall` copies `assets/` to `$out/share/<tool>/assets` and
-  removes `assets.go` from the installed tree.
+- **C1.6** **[check]** (that `flake.nix` exists, that `.envrc`
+  contains `use flake`, and, when `assets/` exists, that `flake.nix`
+  mentions `share/`) The repo carries `flake.nix` (buildGoModule, nixos
+  release channel, flake-utils) and `.envrc` (nix guard that soft-fails
+  with an installer hint, then `use flake`). The flake's `postInstall`
+  copies `assets/` to `$out/share/<tool>/assets` and removes `assets.go`
+  from the installed tree.
 - **C1.7** Nix stamps the commit; make stamps the tag. The divergence
   is documented in flake.nix and never "fixed" with a VERSION file: the
   tag is the single source of truth, and a second copy would go stale
@@ -101,10 +103,11 @@ marked **[check]** are mechanically verifiable.
 
 ## C3 — The manifest
 
-- **C3.1** **[check]** `<tool> manifest --json` emits the tool's
-  machine-readable self-description: tool identity (name, version,
-  commit, date), `schemaVersion`, verbs, assets, and any registered
-  backends.
+- **C3.1** **[check]** (that `manifest --json` runs, exits 0,
+  and carries a non-zero `schemaVersion`) `<tool> manifest --json`
+  emits the tool's machine-readable self-description: tool identity
+  (name, version, commit, date), `schemaVersion`, verbs, assets, and
+  any registered backends.
 - **C3.2** Every verb carries a surface kind, recorded as a cobra
   annotation at the bottom of its constructor
   (`surface.Annotate(cmd, surface.Plumbing)`): `plumbing`
@@ -124,9 +127,10 @@ marked **[check]** are mechanically verifiable.
 - **C3.5** The word **manifest** is reserved for this self-description.
   The install-state file a tool writes into a harness directory is the
   **stamp** (C4.4) — never "manifest" (T9; ste9 collided here first).
-- **C3.6** **[check]** The manifest declares the contract version it
-  conforms to: `"contract": "toolsmith/v1"` (T8). `toolsmith check`
-  and TOOLS.md read conformance from the tool, not from memory.
+- **C3.6** **[check]** (that the field carries the `toolsmith/`
+  prefix, T24) The manifest declares the contract version it conforms
+  to: `"contract": "toolsmith/v1"` (T8). `toolsmith check` and TOOLS.md
+  read conformance from the tool, not from memory.
 - **C3.7** Output schemas per verb are permitted (`OutputSchema`) but
   never filled speculatively.
 - **C3.8** Each verb records its positional-argument usage verbatim from
@@ -232,11 +236,12 @@ marked **[check]** are mechanically verifiable.
   `git describe --tags --match 'v[0-9]*'`; the `--match` is
   load-bearing (keeps milestone tags out of the stamp) and must agree
   with cliff.toml's `tag_pattern`.
-- **C6.3** **[check]** CHANGELOG.md is generated per release by
-  git-cliff and **never committed** — nothing in the repo can disagree
-  with the tag it was built from. `make changelog` and
-  `make release-notes TAG=` (which probes whether the ref exists to
-  pick `--current` vs `--unreleased`) are the two targets.
+- **C6.3** **[check]** (that CHANGELOG.md is not in the git index)
+  CHANGELOG.md is generated per release by git-cliff and **never
+  committed** — nothing in the repo can disagree with the tag it was
+  built from. `make changelog` and `make release-notes TAG=` (which
+  probes whether the ref exists to pick `--current` vs `--unreleased`)
+  are the two targets.
 - **C6.4** release.yml triggers on the tag push, re-gates on
   `nix develop --command make check` (a tag can sit on a commit that
   never went through CI), cross-compiles, generates the changelog and
@@ -247,15 +252,18 @@ marked **[check]** are mechanically verifiable.
   matrix, each through `nix develop --command`. CI never publishes.
   GitHub Actions are **SHA-pinned** (from duo main, T16) — **[check]**. Workflows are
   copied per tool, not shared by reference (T17).
-- **C6.6** **[check]** Conventional commits are enforced from commit
-  one by a commit-msg hook (`contrib/check-commit-msg`), and
-  `make hooks` installs **both** hook types
-  (`--hook-type pre-commit --hook-type commit-msg`) — wip shipped the
-  one-stage gap, ste9 fixed it (T15). The full test suite is
-  deliberately not a per-commit hook.
-- **C6.7** **[check]** golangci-lint config is schema v2,
-  `default: none`, enabling `govet staticcheck errcheck unused revive
-  forbidigo`, with gofumpt as the formatter.
+- **C6.6** **[check]** (that `contrib/check-commit-msg` exists, that
+  `.pre-commit-config.yaml` names `commit-msg`, and, when the Makefile
+  has a `hooks:` target, that it passes `--hook-type commit-msg`)
+  Conventional commits are enforced from commit one by a commit-msg
+  hook (`contrib/check-commit-msg`), and `make hooks` installs **both**
+  hook types (`--hook-type pre-commit --hook-type commit-msg`) — wip
+  shipped the one-stage gap, ste9 fixed it (T15). The full test suite
+  is deliberately not a per-commit hook.
+- **C6.7** **[check]** (that the config says `version: "2"` and
+  `default: none`) golangci-lint config is schema v2, `default: none`,
+  enabling `govet staticcheck errcheck unused revive forbidigo`, with
+  gofumpt as the formatter.
 - **C6.8** `.gitignore` covers `/CLAUDE.local.md`, build output, and
   Nix litter. Any tool-generated per-clone directory (like `.wip/`)
   gets an explicit, decided ignore posture — not an accident of
@@ -277,9 +285,10 @@ marked **[check]** are mechanically verifiable.
   cite decision IDs (contract clauses, register entries). A comment
   that restates the next line is noise; a comment that marks a
   constraint as load-bearing is the point.
-- **C7.5** **[check]** The repo has a README.md that states what the
-  tool is, the install two-step, and where the design of record lives.
-  (wip shipped without one; the skeleton makes absence the anomaly.)
+- **C7.5** **[check]** (that README.md exists) The repo has a README.md
+  that states what the tool is, the install two-step, and where the
+  design of record lives. (wip shipped without one; the skeleton makes
+  absence the anomaly.)
 
 ---
 
