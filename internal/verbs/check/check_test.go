@@ -10,6 +10,7 @@ import (
 
 	"github.com/procrastivity/toolsmith/internal/exitcode"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
+	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 	"github.com/procrastivity/toolsmith/internal/verbs/check"
 )
 
@@ -33,9 +34,11 @@ func run(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
 	runErr := cmd.Execute()
 	code := 0
 	if runErr != nil {
-		var serr *exitcode.SilentError
-		if errors.As(runErr, &serr) {
-			code = serr.Code
+		var terr *toolsmitherr.Error
+		if errors.As(runErr, &terr) {
+			// Mirror cli.Execute, which this standalone command lacks.
+			code = exitcode.FromError(terr)
+			toolsmitherr.Render(&err, "check", terr, false)
 		} else {
 			// Cobra's own Args-validation errors (too many positional
 			// args) and the plain "not a directory" error both reach
@@ -88,10 +91,10 @@ func TestCheck_DefaultPath(t *testing.T) {
 	}
 }
 
-// TestCheck_FindingsPath asserts the exact stdout bytes and exit code
-// (port spec §5.1's findings-present row, §9.5's exitcode.Silent(1)) for
-// a small, deliberately incomplete repo tree that never invokes `go run`
-// (no go.mod), so the test has no toolchain dependency.
+// TestCheck_FindingsPath asserts the exact stdout bytes, exit code, and
+// rendered stderr (port spec §5.1's findings-present row; C2.5, T26) for
+// a small, deliberately incomplete repo tree that never invokes
+// `go run` (no go.mod), so the test has no toolchain dependency.
 func TestCheck_FindingsPath(t *testing.T) {
 	repo := t.TempDir()
 	mustWrite(t, repo, "README.md", "# x\n")
@@ -130,7 +133,7 @@ func TestCheck_FindingsPath(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("exit code = %d, want 1", code)
 	}
-	wantSummary := fmt.Sprintf("11 finding(s) for %s\n", wantRepo)
+	wantSummary := fmt.Sprintf("toolsmith: check: 11 finding(s) for %s\n", wantRepo)
 	if stderr != wantSummary {
 		t.Fatalf("stderr = %q, want %q", stderr, wantSummary)
 	}

@@ -447,6 +447,16 @@ const probeSHA = "0123456789abcdef0123456789abcdef01234567"
 // §9.4 multiple-cmd/ note.
 var cleanRunStderr = regexp.MustCompile(`\A(note: multiple cmd/ entries \([^)]*\); auditing as "[^"]*"\n)?\z`)
 
+// findingsSummaryLine is the rendered check.findings-present verdict
+// (C2.5, T26): the optional §9.4 note, then exactly one Render line.
+// Anchored, so a careless -update cannot bless an extra or unrendered line.
+var findingsSummaryLine = regexp.MustCompile(`\A(note: multiple cmd/ entries \([^)]*\); auditing as "[^"]*"\n)?toolsmith: check: ([0-9]+) finding\(s\) for [^\n]+\n\z`)
+
+// findingLine matches one flat "<clause>: <message>" finding line
+// (Audit's own emission format); every clause ID Audit uses is
+// "C<digits>.<digits>".
+var findingLine = regexp.MustCompile(`(?m)^C[0-9]+\.[0-9]+: `)
+
 // generateC62NoCliffProbe exercises tagNamespace's no-cliff.toml branch
 // (port spec §9.6, corrected at step-18): Makefile present, no
 // cliff.toml.
@@ -645,6 +655,17 @@ func TestGoldenCheck(t *testing.T) {
 			}
 			if strings.HasSuffix(blobs[0], "exit=0\n") && !cleanRunStderr.MatchString(stderrs[0]) {
 				t.Errorf("port spec §10: a clean run wrote stderr other than the §9.4 note:\n%s", stderrs[0])
+			}
+			if strings.HasSuffix(blobs[0], "exit=1\n") {
+				// The verdict's N must equal stdout's own finding lines.
+				stdoutOnly := strings.TrimSuffix(blobs[0], "exit=1\n")
+				wantN := len(findingLine.FindAllString(stdoutOnly, -1))
+				m := findingsSummaryLine.FindStringSubmatch(stderrs[0])
+				if m == nil {
+					t.Errorf("findings-present stderr is not exactly one %q-shaped line:\n%s", findingsSummaryLine.String(), stderrs[0])
+				} else if gotN, err := strconv.Atoi(m[2]); err != nil || gotN != wantN {
+					t.Errorf("stderr summary count = %s, want %d (stdout's own finding-line count):\nstdout:\n%s\nstderr:\n%s", m[2], wantN, stdoutOnly, stderrs[0])
+				}
 			}
 
 			goldenCompare(t, filepath.Join("check", tc.name+".stdout"), blobs[0])

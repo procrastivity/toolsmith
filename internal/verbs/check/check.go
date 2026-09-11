@@ -15,9 +15,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/procrastivity/toolsmith/internal/exitcode"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
 	"github.com/procrastivity/toolsmith/internal/surface"
+	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 )
 
 // Command constructs the `toolsmith check [path]` verb. streams is the
@@ -92,22 +92,12 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 				_, err := fmt.Fprintf(streams.Out, "no findings — mechanical clauses hold for %s\n", repo)
 				return err
 			}
-			if _, err := fmt.Fprintf(streams.Err, "%d finding(s) for %s\n", len(findings), repo); err != nil {
-				return err
-			}
-
-			// port spec §9.5, citing CONTRACT.md C2.4: on the
-			// findings-present path, the finding lines already written
-			// to streams.Out above are the verb's payload, not an error
-			// message — the oracle's own exit-1 stdout is exactly those
-			// lines, no clean-run line. The standard toolsmitherr.Render
-			// path would both empty stdout (C2.2) and write its own
-			// "toolsmith: check: <message>" line, which is neither the
-			// count-summary line already written to stderr above nor
-			// byte-identical to it. Returning exitcode.Silent(1) exits 1
-			// without invoking that renderer, so the bytes already
-			// written stand.
-			return exitcode.Silent(1)
+			// The finding lines above are the payload, and this error is
+			// the verdict about them (C2.5, T26): Render writes it to stderr
+			// as one line and the exit is 1, as for doctor. Rejected:
+			// exitcode.Silent, which served the parity oracle retired at
+			// cutover (725e94e) and would keep the verdict out of --json.
+			return toolsmitherr.New("check.findings-present", fmt.Sprintf("%d finding(s) for %s", len(findings), repo))
 		},
 	}
 	surface.Annotate(cmd, surface.Plumbing)
