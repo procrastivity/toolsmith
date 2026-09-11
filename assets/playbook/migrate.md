@@ -191,9 +191,10 @@ The last step of every conversion:
 
 - run `toolsmith check <repo>` and clear the findings, or record
   why a finding stands;
-- re-read CONTRACT.md against what you actually built, and fold each
-  divergence back into the sidecar's decisions as an
-  implementation-forced note;
+- re-read CONTRACT.md against what you actually built, and record each
+  divergence as an implementation-forced note in
+  `docs/<matter>/decisions.md` (C7.1), with the contract minor you read
+  against;
 - if the conversion taught the contract something new, that is a
   DECISIONS.md entry in toolsmith plus a clause — not a comment in your
   repo (README, "Evolving the conventions");
