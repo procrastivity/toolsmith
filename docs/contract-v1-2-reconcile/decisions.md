@@ -8,8 +8,10 @@ the same sidecar. The Matter register is wip (T22), so the Body, Workplan,
 Stages, Steps and findings live there. This file records what building the
 Matter forced that CONTRACT.md does not say (C7.1).
 
-**Status: the C4.5 design is recorded (step-13) and built (steps 14 to 16).
-The reconciliation pass against v1.2 is not yet run.**
+**Status: reconciliation pass complete, read against CONTRACT.md v1.2 at
+`44cba9d`.** The five divergences this Matter took on are closed. The pass
+found two more that predate this Matter. Each is on the backlog, and neither
+blocks the seal (§2.3).
 
 ---
 
@@ -142,8 +144,112 @@ is a finding.
   refuses inside the per-harness package. This Matter splits the codes
   where they are and does not move them. The reconciliation pass reads C4.3.
 
+## 2. The reconciliation pass against v1.2 (step-18)
+
+The pass read every clause this Matter touched, literally, against
+toolsmith's tree and against the skeleton that `new` ships. Each clause got
+one verdict: holds, diverges, or holds with a note. The clauses this Matter
+did not touch keep their verdicts from `docs/binary/decisions.md` §1.
+
+### 2.1 Holds
+
+- **C2.3.** `check` and `new` now read `--json`, as `manifest`, `version`,
+  `install`, `uninstall` and `doctor` already did, so every verb honors the
+  flag. No verb redeclares it. `-v/--verbose` stays bound once at root, and
+  `manifest` and `version` read it.
+- **C2.4.** The exit table is unchanged. `exitcode.Silent` stays in the
+  chassis, and no toolsmith verb returns it any more.
+- **C2.5.** Every `toolsmitherr.New` code in toolsmith is under `refusal.`,
+  `validation.`, `not-found.` or `internal.`, or has the sanctioned
+  `<verb>.findings-present` form (`check`, `doctor`). Doctor's finding codes
+  are `advisory.` or `refusal.`.
+- **C4.2.** `namesOf` panics on a duplicate harness name.
+- **C4.4.** The only hand-written prose in the claude-code projection is
+  `description.txt`, `judgment.md` and `agent-guidance.md`, all resolved
+  through the asset chain. The `plugin.json` suffix and the `SKILL.md`
+  headings are fixed template text, which C4.4 counts as generated (T27).
+- **C4.6.** The three comparisons stay distinct inside `harness.Status`, as
+  conditions 3 and 4 and the `current` case, and its comment names each.
+  `install`'s refusal names `--force`. A version bump with byte-identical
+  output is still `current`, because `toolVersion` is never compared.
+- **C7.1.** This file exists, with the fixed opening stanza, a bolded
+  status line and a closer.
+
+### 2.2 Holds, with a note
+
+- **C4.5.** All six states are derived (§1). The seventh dimension, a
+  session that loaded an older projection, is not built, because no chassis
+  code knows about live sessions (§1.6).
+- **C4.7.** `doctor` reports exhaustively, as flat `{code, message}` findings,
+  and only `incompatible` fails the run. `uninstall` removes the stamped tree
+  only when the disk matches the stamp, and refuses on foreign content, on
+  edits and on an unusable stamp. Two readings to note:
+  - On an empty directory with no stamp, it returns
+    `not-found.harness-not-installed`, not a refusal, because nothing is
+    installed.
+  - It removes a stale tree. C4.7's "refuses on … drift" is read as drift
+    between disk and stamp, which is the only drift that puts a user's
+    content at risk.
+
+### 2.3 Diverges
+
+Neither divergence comes from this Matter's changes. Both are chassis code
+that the toolsmith-binary pass read as holding.
+
+- **C2.2 (chassis).** Bare `install` writes its per-target results to
+  stdout and then returns `refusal.harness-targets-refused` when any target
+  refused. So stdout is not empty on that failure, and C2.2's one exception
+  is the `<verb>.findings-present` verdict, which a refusal is not. The code
+  was `refusal.unstamped-harness-target` before step-15, with the same
+  shape. wip has it too. **Disposition:** backlog
+  `01M279NRSG375S17HV10Z1GXK8`, which needs a ruling on what a partial run
+  is.
+- **C4.3 (chassis).** `install` keeps refusal policy in the verb. But
+  `claudecode.Uninstall` still decides its refusal inside the per-harness
+  package, because the registry row's `Uninstall func()` takes no policy
+  input. Step-15 split the codes where they were and did not move them
+  (§1.6). **Disposition:** backlog `01M279NRVB1R4QE5Q9BW2NT204`.
+
+## 3. `[check]` markers beside what the checker reads
+
+This Matter changed no `[check]` marker, no audited clause and no code in
+`internal/verbs/check/audit.go` or `coverage.go` (`git diff c48235e` on both
+is empty). The marks gate (`coverage_test.go`) is green, so the 13 marked
+clause IDs still equal `AuditedClauses()`. That gate compares IDs, not
+extents, so the extents are set here:
+
+| Clause | What the marker claims | What the checker reads | Extent |
+|---|---|---|---|
+| C1.1 | `CGO_ENABLED=0` anywhere in the Makefile, `ci.yml` and `flake.nix` | the same three tests | matches |
+| C1.2 | that `cmd/` holds a `<tool>` directory | that `cmd/` has at least one subdirectory | matches |
+| C1.6 | `flake.nix` exists, `.envrc` contains `use flake`, `share/` when `assets/` exists | the same | matches |
+| C2.1 | `.golangci.yml` carries the forbidigo rules banning the three `fmt` print calls | `.golangci.yml` contains `forbidigo` and `fmt\.Print` | matches, at substring level |
+| C3.1 | `manifest --json` runs, exits 0, and has a non-zero `schemaVersion` | the same | matches |
+| C3.4 | `manifest_digest` is present and `sha256:`-prefixed | the same | matches |
+| C3.6 | the `toolsmith/` prefix (T24) | the same | matches |
+| C6.2 | `--match 'v[0-9]*'` agreeing with `cliff.toml`'s `tag_pattern` | the Makefile's `--match`, and `cliff.toml`'s `tag_pattern` | matches |
+| C6.3 | `CHANGELOG.md` is not in the git index | the same | matches |
+| C6.5 | SHA-pinned actions | every `uses:` ref is 40 hex, and both workflows exist and run `nix develop --command` | matches, and reads more |
+| C6.6 | the hook file, `commit-msg` in the pre-commit config, `--hook-type commit-msg` when a `hooks:` target exists | the same | matches |
+| C6.7 | `version: "2"` and `default: none` | the same | matches |
+| C7.5 | `README.md` exists | the same | matches |
+
+The eight markers that `evidence/2026-09-11-toolsmith-conformance.md` §5
+found claiming more were narrowed at `c48235e`. No marker claims more than
+the checker reads.
+
+## 4. The contract minor this pass read against
+
+**v1.2.** The clause added after v1.1 is C2.5's `<verb>.findings-present`
+form (T26). T27's C4.4 sentence is a clarification and has no row. The
+previous pass, `docs/binary/decisions.md`, read against v1.1.
+
 ## Where this stands
 
-The C4.5 design is built in both trees: `harness.Status` (step-14), the
-split refusals (step-15), and doctor's per-target states (step-16). The
-reconciliation pass against v1.2 (step-18) extends this file.
+toolsmith and its skeleton hold C2.3, C2.5, C4.2, C4.4 and C4.5 at
+contract v1.2. Those are the five divergences toolsmith-binary left open,
+and each note in `docs/binary/decisions.md` §2 carries its resolution.
+Every clause this Matter touched is read against v1.2 in §2. Two older
+chassis divergences, C2.2 in bare `install` and C4.3 in `uninstall`, are
+recorded with backlog entries and are not fixed here. The conformance run
+against v1.2 is recorded in `evidence/`.
