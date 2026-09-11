@@ -28,6 +28,19 @@ func Tree(prefix string) (fs.FS, Source, error) {
 			return sub, SourceOverride, nil
 		}
 	}
+	return DefaultTree(prefix)
+}
+
+// DefaultTree resolves prefix by the default -> embedded chain only,
+// skipping the override link Tree checks first. It exists for a caller
+// that enumerates the *names* in a tree (internal/verbs/doc lists
+// playbook/ and handoff-kit/) rather than resolving one asset's content:
+// shadow by name (C5.2) replaces a file at a name the shipped tree already
+// has, so the set of names on offer must never grow just because an
+// override directory happens to contain an extra file — "overrides never
+// add names." A per-file override is still honored where it matters, at
+// content-resolution time, through Resolve.
+func DefaultTree(prefix string) (fs.FS, Source, error) {
 	if dir, err := DefaultDir(); err == nil {
 		if sub, ok := dirFSIfExists(filepath.Join(dir, prefix)); ok {
 			return sub, SourceDefault, nil
@@ -36,12 +49,12 @@ func Tree(prefix string) (fs.FS, Source, error) {
 
 	sub, err := fs.Sub(rootassets.FS, prefix)
 	if err != nil {
-		return nil, SourceEmbedded, fmt.Errorf("asset: %q not found in the override or default directory, and the embedded fallback has no such tree: %w", prefix, err)
+		return nil, SourceEmbedded, fmt.Errorf("asset: %q not found in the default directory, and the embedded fallback has no such tree: %w", prefix, err)
 	}
 	// fs.Sub succeeds for a prefix that does not exist, so confirm the
 	// subtree is really there before reporting it resolved.
 	if _, err := fs.Stat(sub, "."); err != nil {
-		return nil, SourceEmbedded, fmt.Errorf("asset: %q not found in the override or default directory, and the embedded fallback has no such tree", prefix)
+		return nil, SourceEmbedded, fmt.Errorf("asset: %q not found in the default directory, and the embedded fallback has no such tree", prefix)
 	}
 	return sub, SourceEmbedded, nil
 }

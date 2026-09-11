@@ -11,6 +11,7 @@ import (
 	"github.com/procrastivity/toolsmith/internal/cliflags"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
 	checkverb "github.com/procrastivity/toolsmith/internal/verbs/check"
+	docverb "github.com/procrastivity/toolsmith/internal/verbs/doc"
 	doctorverb "github.com/procrastivity/toolsmith/internal/verbs/doctor"
 	installverb "github.com/procrastivity/toolsmith/internal/verbs/install"
 	manifestverb "github.com/procrastivity/toolsmith/internal/verbs/manifest"
@@ -61,6 +62,7 @@ func NewRootCommand(streams *iostreams.Streams, build buildinfo.Info) *cobra.Com
 	// surface.Annotate — the manifest walk hard-errors without it (C3.2).
 	root.AddCommand(checkverb.Command(streams))
 	root.AddCommand(newverb.Command(streams))
+	root.AddCommand(docverb.Command(streams))
 
 	return root
 }

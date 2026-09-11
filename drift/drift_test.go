@@ -363,8 +363,16 @@ var internalPathExemptions = []pathExemption{
 		reason: "domain verb: the skeleton ships no domain verbs (T2); new is toolsmith's own instantiator",
 	},
 	{
+		prefix: "verbs/doc/",
+		reason: "domain verb: the skeleton ships no domain verbs (T2); doc serves toolsmith's own CONTRACT.md, playbook and handoff-kit, none of which a generated tool ships an equivalent of",
+	},
+	{
+		prefix: "cli/doc_e2e_test.go",
+		reason: "e2e coverage for the toolsmith-only doc verb, kept in its own file (like verbs/check and verbs/new's own tests) so it never collides with e2e_test.go's shared chassis coverage",
+	},
+	{
 		prefix: "asset/tree.go",
-		reason: "exists only to let the new verb resolve the skeleton subtree it writes to disk (its own doc comment points at internal/verbs/new); no caller outside that verb",
+		reason: "Tree lets the new verb resolve the skeleton subtree it writes to disk, and DefaultTree lets the doc verb enumerate playbook/ and handoff-kit/ without the override link; both callers are toolsmith-only verbs the skeleton does not ship",
 	},
 	{
 		prefix: "manifest/skeleton_payload_test.go",
@@ -399,6 +407,18 @@ var internalTextExemptions = []textExemption{
 	},
 	{
 		path:        "cli/root.go",
+		present:     "\tdocverb \"github.com/procrastivity/toolname/internal/verbs/doc\"\n",
+		replacement: "",
+		reason:      "imports the toolsmith-only doc verb to register it; support code for a domain verb the skeleton does not ship",
+	},
+	{
+		path:        "cli/root.go",
+		present:     "\troot.AddCommand(docverb.Command(streams))\n",
+		replacement: "",
+		reason:      "registers the toolsmith-only doc verb on the root command",
+	},
+	{
+		path:        "cli/root.go",
 		present:     "\t\tShort: \"toolname — instantiate the chassis, audit a tool against the contract, carry the migration playbook\",\n",
 		replacement: "\t\tShort: \"toolname — TODO: one line on what this tool is\",\n",
 		reason:      "placeholder: toolsmith new's own checklist names \"root Short\" as a marker to fill; same class as skillDescription",
@@ -430,6 +450,7 @@ var internalTextExemptions = []textExemption{
 // the real trees, never assumed.
 var rootPathExemptions = []pathExemption{
 	{prefix: "CONTRACT.md", reason: "the contract itself; a tool conforms to it and carries only the Contract constant"},
+	{prefix: "contract.go", reason: "embeds CONTRACT.md so the doc verb can serve it; the contract is not tunable behavior (C5.1) so it is never shipped as an asset, and a generated tool has no CONTRACT.md of its own to embed"},
 	{prefix: "DECISIONS.md", reason: "toolsmith's decision register (T-numbers); a tool records its own decisions elsewhere (C7.1)"},
 	{prefix: "TOOLS.md", reason: "the fleet register; exists once, in toolsmith"},
 	{prefix: "assets/playbook/", reason: "the migration playbook toolsmith ships; a generated tool ships no playbook"},

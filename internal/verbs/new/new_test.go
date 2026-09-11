@@ -65,8 +65,8 @@ Checklist — the judgment steps the rename cannot do:
   4. make hooks — installs both pre-commit stages.
   5. Decide the verb surface; register verbs in internal/cli/root.go,
      one package each, every constructor ending in surface.Annotate.
-  6. For a migration (not a fresh tool): follow toolsmith's
-     assets/playbook/migrate.md — port spec, parity gate, cutover.
+  6. For a migration (not a fresh tool): run toolsmith doc
+     playbook/migrate.md and follow it — port spec, parity gate, cutover.
   7. Run toolsmith check out/acme and clear any findings.
   8. Add the tool to toolsmith's TOOLS.md.
 `
