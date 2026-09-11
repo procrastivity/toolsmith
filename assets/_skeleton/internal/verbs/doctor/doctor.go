@@ -1,6 +1,7 @@
-// Package doctor implements the `toolname doctor` verb: it runs every
-// registered check (internal/checks) and reports findings flat, with no
-// severity levels (C4.7). A tool grows doctor by registering checks, never
+// Package doctor implements the `toolname doctor` verb: it reports every
+// registered harness target's drift state (C4.5) and every finding, flat
+// and with no severity levels (C4.7). Only a code without the "advisory."
+// prefix fails the run. A tool grows doctor by registering checks, never
 // by a second command or a second output path.
 package doctor
 
@@ -21,8 +22,8 @@ import (
 
 // Command constructs the `toolname doctor` verb. root is the
 // *cobra.Command NewRootCommand is assembling, captured by reference — the
-// same pattern manifest/install use — so the stale-harness-artifact check
-// reads the manifest every verb ultimately registered on it.
+// same pattern manifest/install use — so checks.HarnessTargets reads the
+// manifest every verb ultimately registered on it.
 func Command(streams *iostreams.Streams, build buildinfo.Info, root *cobra.Command) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor",
@@ -31,11 +32,12 @@ func Command(streams *iostreams.Streams, build buildinfo.Info, root *cobra.Comma
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			flags := cliflags.FromContext(cmd.Context())
 
-			findings, err := checks.Run(
-				func() ([]checks.Finding, error) {
-					return checks.CheckStaleHarnessArtifacts(root, build)
-				},
-			)
+			// HarnessTargets returns both findings and per-target state
+			// from one registry walk (internal/checks), so there is
+			// nothing left for the generic checks.Run to compose here;
+			// a future check with no per-target state would run through
+			// checks.Run and have its findings appended below.
+			findings, targets, err := checks.HarnessTargets(root, build)
 			if err != nil {
 				return err
 			}
@@ -46,8 +48,9 @@ func Command(streams *iostreams.Streams, build buildinfo.Info, root *cobra.Comma
 					out = []checks.Finding{}
 				}
 				b, err := json.Marshal(struct {
-					Findings []checks.Finding `json:"findings"`
-				}{Findings: out})
+					Findings []checks.Finding     `json:"findings"`
+					Targets  []checks.TargetState `json:"targets"`
+				}{Findings: out, Targets: targets})
 				if err != nil {
 					return err
 				}
@@ -57,6 +60,11 @@ func Command(streams *iostreams.Streams, build buildinfo.Info, root *cobra.Comma
 				return findingsError(findings)
 			}
 
+			for _, t := range targets {
+				if _, err := fmt.Fprintf(streams.Out, "%s: %s at %s\n", t.Harness, t.State, t.Dir); err != nil {
+					return err
+				}
+			}
 			if len(findings) == 0 {
 				_, err := fmt.Fprintln(streams.Out, "no issues found")
 				return err

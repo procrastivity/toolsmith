@@ -91,7 +91,7 @@ func Command(streams *iostreams.Streams, build buildinfo.Info, root *cobra.Comma
 				if err != nil {
 					return err
 				}
-				if err := harness.Refusal(harnessName, installDir, s, forceRemedy(harnessName, s)); err != nil {
+				if err := harness.Refusal(harnessName, installDir, s, harness.ForceRemedy(harnessName, s)); err != nil {
 					return err
 				}
 				if s == harness.Current {
@@ -140,25 +140,6 @@ func writeTargetedResult(streams *iostreams.Streams, flags cliflags.Flags, harne
 	}
 	_, err := fmt.Fprintln(streams.Out, line)
 	return err
-}
-
-// forceRemedy names --force and, for the refusing state s, what --force
-// would do to harnessName's tree — the fact a refusal must not hide
-// (C4.5, C4.6): overwrite content the tool never wrote, destroy a human's
-// edits, or replace an unreadable or foreign-schema stamp. Called only for
-// s in {UnownedConflict, Modified, Incompatible}; harness.Refusal returns
-// nil for every other state before this text would be used.
-func forceRemedy(harnessName string, s harness.State) string {
-	var consequence string
-	switch s {
-	case harness.UnownedConflict:
-		consequence = "which overwrites files the tool never wrote"
-	case harness.Modified:
-		consequence = "which destroys the edits"
-	case harness.Incompatible:
-		consequence = "which replaces the stamp"
-	}
-	return fmt.Sprintf("re-run with `toolsmith install %s --force`, %s", harnessName, consequence)
 }
 
 // harnessResult is one row of the bare-invocation report: what happened
@@ -216,7 +197,7 @@ func installAll(streams *iostreams.Streams, flags cliflags.Flags, m manifest.Man
 			if err != nil {
 				return err
 			}
-			if err := harness.Refusal(h.Name, installDir, s, forceRemedy(h.Name, s)); err != nil {
+			if err := harness.Refusal(h.Name, installDir, s, harness.ForceRemedy(h.Name, s)); err != nil {
 				var terr *toolsmitherr.Error
 				if errors.As(err, &terr) {
 					results = append(results, harnessResult{

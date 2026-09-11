@@ -514,3 +514,154 @@ func TestInstallAll_OneRefused(t *testing.T) {
 		t.Fatalf("error code = %q, want refusal.harness-targets-refused", envelope.Error.Code)
 	}
 }
+
+// makeMissing is the doctor state fixture for Missing: nothing installed.
+func makeMissing(t *testing.T, skills string, _ []string) string {
+	t.Helper()
+	return filepath.Join(skills, "toolname")
+}
+
+// makeStale installs cleanly, then tampers with one generated file's disk
+// content and its stamp entry together, to the same wrong value — disk
+// still matches the stamp (no Modified), but the current binary's own
+// output for that file (untouched) no longer matches the stamp: Status's
+// Stale, the binary-vs-stamp question alone (C4.6). A plain hand-edit
+// would also break disk-vs-stamp and read as Modified instead, which is
+// why this rewrites the stamp entry too.
+func makeStale(t *testing.T, skills string, env []string) string {
+	t.Helper()
+	skillDir := installClean(t, skills, env)
+
+	staleContent := []byte("stale content\n")
+	sum := sha256.Sum256(staleContent)
+	staleHash := hex.EncodeToString(sum[:])
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), staleContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	stampPath := filepath.Join(skillDir, ".toolname-manifest-stamp.json")
+	raw, err := os.ReadFile(stampPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stamp map[string]any
+	if err := json.Unmarshal(raw, &stamp); err != nil {
+		t.Fatal(err)
+	}
+	files, ok := stamp["files"].(map[string]any)
+	if !ok {
+		t.Fatalf("stamp %q has no files object: %v", stampPath, stamp)
+	}
+	files["SKILL.md"] = staleHash
+	out, err := json.Marshal(stamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stampPath, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return skillDir
+}
+
+// TestDoctor_JSON_States drives doctor --json across all six drift states
+// and asserts the reported target state, the finding codes, and the exit
+// code: 1 only for Incompatible (the one state whose finding keeps the
+// "refusal." prefix and so fails the run, C4.7), 0 for every other state.
+func TestDoctor_JSON_States(t *testing.T) {
+	cases := []struct {
+		name      string
+		setup     func(t *testing.T, skills string, env []string) string
+		wantState string
+		wantExit  int
+		wantCodes []string
+	}{
+		{"missing", makeMissing, "missing", 0, nil},
+		{"current", installClean, "current", 0, nil},
+		{"stale", makeStale, "stale", 0, []string{"advisory.stale-harness-artifact"}},
+		{"modified", makeModified, "modified", 0, []string{"advisory.modified-harness-target"}},
+		{"unowned_conflict", makeUnownedConflict, "unowned_conflict", 0, []string{"advisory.unowned-harness-target"}},
+		{"incompatible unparseable stamp", makeIncompatibleUnparseable, "incompatible", 1, []string{"refusal.incompatible-harness-target"}},
+		{"incompatible schemaVersion", makeIncompatibleSchemaVersion, "incompatible", 1, []string{"refusal.incompatible-harness-target"}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			skills := t.TempDir()
+			env := []string{"TOOLNAME_CLAUDE_SKILLS_DIR=" + skills}
+			c.setup(t, skills, env)
+
+			r := run(t, env, "doctor", "--json")
+			if r.exitCode != c.wantExit {
+				t.Fatalf("doctor --json: exit=%d, want %d; stdout=%q stderr=%q", r.exitCode, c.wantExit, r.stdout, r.stderr)
+			}
+
+			var payload struct {
+				Findings []struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"findings"`
+				Targets []struct {
+					Harness string `json:"harness"`
+					Dir     string `json:"dir"`
+					State   string `json:"state"`
+				} `json:"targets"`
+			}
+			if err := json.Unmarshal([]byte(r.stdout), &payload); err != nil {
+				t.Fatalf("doctor --json stdout is not one JSON value: %v; stdout=%q", err, r.stdout)
+			}
+			if len(payload.Targets) != 1 || payload.Targets[0].Harness != "claude-code" {
+				t.Fatalf("targets = %+v, want exactly one claude-code target", payload.Targets)
+			}
+			if payload.Targets[0].State != c.wantState {
+				t.Fatalf("targets[0].state = %q, want %q", payload.Targets[0].State, c.wantState)
+			}
+
+			gotCodes := map[string]bool{}
+			for _, f := range payload.Findings {
+				gotCodes[f.Code] = true
+			}
+			for _, code := range c.wantCodes {
+				if !gotCodes[code] {
+					t.Errorf("findings = %+v, want a finding with code %q", payload.Findings, code)
+				}
+			}
+			if len(c.wantCodes) == 0 && len(payload.Findings) != 0 {
+				t.Errorf("findings = %+v, want none", payload.Findings)
+			}
+
+			if c.wantExit == 1 {
+				envelope := parseErrorEnvelope(t, r.stderr)
+				if envelope.Error.Code != "doctor.findings-present" {
+					t.Errorf("error code = %q, want doctor.findings-present", envelope.Error.Code)
+				}
+			} else if r.stderr != "" {
+				t.Errorf("stderr = %q, want empty on a passing doctor run", r.stderr)
+			}
+		})
+	}
+}
+
+// TestDoctor_TextMode_StateLine asserts the text-mode "<harness>: <state>
+// at <dir>" line appears ahead of the "no issues found" line.
+func TestDoctor_TextMode_StateLine(t *testing.T) {
+	skills := t.TempDir()
+	env := []string{"TOOLNAME_CLAUDE_SKILLS_DIR=" + skills}
+	skillDir := filepath.Join(skills, "toolname")
+
+	r := run(t, env, "doctor")
+	if r.exitCode != 0 {
+		t.Fatalf("doctor: exit=%d, want 0; stdout=%q stderr=%q", r.exitCode, r.stdout, r.stderr)
+	}
+	wantLine := fmt.Sprintf("claude-code: missing at %s", skillDir)
+	stateIdx := strings.Index(r.stdout, wantLine)
+	if stateIdx < 0 {
+		t.Fatalf("doctor stdout = %q, want it to contain %q", r.stdout, wantLine)
+	}
+	issuesIdx := strings.Index(r.stdout, "no issues found")
+	if issuesIdx < 0 {
+		t.Fatalf("doctor stdout = %q, want it to still say no issues found", r.stdout)
+	}
+	if stateIdx > issuesIdx {
+		t.Fatalf("doctor stdout = %q, want the state line ahead of the findings/no-issues line", r.stdout)
+	}
+}
