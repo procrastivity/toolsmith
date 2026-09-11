@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/procrastivity/toolname/internal/harness"
 	"github.com/procrastivity/toolname/internal/manifest"
 	"github.com/procrastivity/toolname/internal/toolnameerr"
 )
@@ -13,10 +14,11 @@ import (
 // the result with tool.version, schemaVersion, and a per-file checksum
 // (C4.4). It always overwrites whatever it finds and writes the stamp
 // unconditionally — refusing to overwrite a hand-edited or unstamped
-// target is the install verb's job (internal/harness.RefuseHandEdited),
-// not this function's, kept out of Install so every harness stays
-// policy-free (C4.3) and so a caller that has already decided to
-// overwrite (the verb after --force) needs no second flag here.
+// target is the install verb's job (internal/harness.Status plus
+// internal/harness.Refusal), not this function's, kept out of Install so
+// every harness stays policy-free (C4.3) and so a caller that has already
+// decided to overwrite (the verb after --force) needs no second flag
+// here.
 func Install(m manifest.Manifest) (string, error) {
 	files, err := Generate(m)
 	if err != nil {
@@ -51,39 +53,30 @@ func Install(m manifest.Manifest) (string, error) {
 }
 
 // Uninstall removes exactly the stamped tree at InstallDir() — never more
-// (C4.7). It refuses, rather than silently proceeding, when the target has
-// no stamp or its content no longer matches the stamp (hand-edited or
-// foreign content): projections are never hand-authored, and this must not
-// silently delete something a human put there by hand.
+// (C4.7). It refuses, rather than silently proceeding, on any of Status's
+// three unsafe states (hand-edited, foreign, or unreadable content):
+// projections are never hand-authored, and this must not silently delete
+// something a human put there by hand. Status is asked with a nil files
+// map — uninstall has nothing to generate, so a stale tree (C4.6's
+// binary-vs-stamp question) reads as Current and is removed like any
+// other current tree; uninstall has no --force, so Refusal's remedy here
+// always names removing the tree by hand instead.
 func Uninstall() (string, error) {
 	dir, err := InstallDir()
 	if err != nil {
 		return "", err
 	}
 
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+	s, err := harness.Status(dir, nil)
+	if err != nil {
+		return "", err
+	}
+	if s == harness.Missing {
 		return "", toolnameerr.New("not-found.harness-not-installed",
 			fmt.Sprintf("not found — no %s skill is installed at %s", Name, dir))
-	} else if err != nil {
-		return "", fmt.Errorf("claudecode: checking install dir %q: %w", dir, err)
 	}
-
-	stamp, ok, err := manifest.ReadStamp(dir)
-	if err != nil {
+	if err := harness.Refusal(Name, dir, s, "remove it by hand if that was intentional"); err != nil {
 		return "", err
-	}
-	if !ok {
-		return "", toolnameerr.New("refusal.unstamped-harness-target",
-			fmt.Sprintf("refused — %s has no install stamp; it was not written by `toolname install %s` and will not be removed automatically", dir, Name))
-	}
-
-	actual, err := manifest.ChecksumTree(dir)
-	if err != nil {
-		return "", err
-	}
-	if drift := manifest.Drift(actual, stamp); len(drift) > 0 {
-		return "", toolnameerr.New("refusal.unstamped-harness-target",
-			fmt.Sprintf("refused — %s no longer matches what `toolname install %s` last wrote (%d file(s) changed since); remove it by hand if that was intentional", dir, Name, len(drift)))
 	}
 
 	if err := os.RemoveAll(dir); err != nil {

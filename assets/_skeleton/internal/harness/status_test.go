@@ -226,33 +226,6 @@ func TestStatus_StampReadErrorIsNotAState(t *testing.T) {
 	}
 }
 
-// TestIsCurrent asserts that IsCurrent is exactly Status(...) == Current.
-func TestIsCurrent(t *testing.T) {
-	dir := t.TempDir()
-	generated := map[string][]byte{"a.txt": []byte("generated content")}
-	writeFile(t, dir, "a.txt", generated["a.txt"])
-	mustWriteStamp(t, dir, manifest.Stamp{
-		SchemaVersion: manifest.SchemaVersion,
-		Files:         manifest.ChecksumFiles(generated),
-	})
-
-	got, err := IsCurrent(dir, generated)
-	if err != nil {
-		t.Fatalf("IsCurrent: unexpected error: %v", err)
-	}
-	if !got {
-		t.Errorf("IsCurrent() = false, want true")
-	}
-
-	got, err = IsCurrent(dir, map[string][]byte{"a.txt": []byte("different")})
-	if err != nil {
-		t.Fatalf("IsCurrent: unexpected error: %v", err)
-	}
-	if got {
-		t.Errorf("IsCurrent() = true, want false (stale)")
-	}
-}
-
 func mustWriteStamp(t *testing.T, dir string, stamp manifest.Stamp) {
 	t.Helper()
 	if err := os.MkdirAll(dir, 0o755); err != nil {

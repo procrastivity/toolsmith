@@ -269,3 +269,248 @@ func TestUnknownHarness_JSONEnvelope(t *testing.T) {
 		t.Fatalf("error code = %q, want validation.unknown-harness", envelope.Error.Code)
 	}
 }
+
+// errorEnvelope is the {"error":{"code","message"}} shape a structured
+// error renders on stderr under --json (C2.5).
+type errorEnvelope struct {
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+// parseErrorEnvelope decodes stderr as the --json error envelope, failing
+// the test if it is not one JSON value of that shape.
+func parseErrorEnvelope(t *testing.T, stderr string) errorEnvelope {
+	t.Helper()
+	var envelope errorEnvelope
+	if err := json.Unmarshal([]byte(stderr), &envelope); err != nil {
+		t.Fatalf("stderr is not the {\"error\":...} envelope: %v; stderr=%q", err, stderr)
+	}
+	return envelope
+}
+
+// installClean installs claude-code cleanly into skills and returns its
+// install directory, the fixture every refusing-state setup below starts
+// from.
+func installClean(t *testing.T, skills string, env []string) string {
+	t.Helper()
+	if r := run(t, env, "install", "claude-code"); r.exitCode != 0 {
+		t.Fatalf("install: exit=%d stderr=%q", r.exitCode, r.stderr)
+	}
+	return filepath.Join(skills, "toolsmith")
+}
+
+// makeUnownedConflict puts a file at claude-code's install path with no
+// stamp beside it — Status's UnownedConflict: content the tool never
+// wrote (C4.5).
+func makeUnownedConflict(t *testing.T, skills string, _ []string) string {
+	t.Helper()
+	skillDir := filepath.Join(skills, "toolsmith")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "foreign.txt"), []byte("not ours\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return skillDir
+}
+
+// makeModified installs cleanly, then hand-edits a generated file —
+// Status's Modified: the disk no longer matches the stamp (C4.5).
+func makeModified(t *testing.T, skills string, env []string) string {
+	t.Helper()
+	skillDir := installClean(t, skills, env)
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("hand-edited\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return skillDir
+}
+
+// makeIncompatibleUnparseable installs cleanly, then corrupts the stamp's
+// JSON — Status's Incompatible via manifest.ErrStampUnparseable (C4.5,
+// §1.2).
+func makeIncompatibleUnparseable(t *testing.T, skills string, env []string) string {
+	t.Helper()
+	skillDir := installClean(t, skills, env)
+	stampPath := filepath.Join(skillDir, ".toolsmith-manifest-stamp.json")
+	if err := os.WriteFile(stampPath, []byte("not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return skillDir
+}
+
+// makeIncompatibleSchemaVersion installs cleanly, then rewrites the
+// stamp's schemaVersion to a value this binary does not recognize —
+// Status's Incompatible via the schemaVersion mismatch (C4.5, §1.2).
+func makeIncompatibleSchemaVersion(t *testing.T, skills string, env []string) string {
+	t.Helper()
+	skillDir := installClean(t, skills, env)
+	stampPath := filepath.Join(skillDir, ".toolsmith-manifest-stamp.json")
+	raw, err := os.ReadFile(stampPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stamp map[string]any
+	if err := json.Unmarshal(raw, &stamp); err != nil {
+		t.Fatal(err)
+	}
+	stamp["schemaVersion"] = 999
+	out, err := json.Marshal(stamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stampPath, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return skillDir
+}
+
+// refusalCases is the fixture table both TestInstall_RefusalCodes and
+// TestUninstall_RefusalCodes drive: one row per refusing state, each
+// naming the code Status maps it to (C4.5 §1.4).
+var refusalCases = []struct {
+	name  string
+	setup func(t *testing.T, skills string, env []string) string
+	code  string
+}{
+	{"unowned_conflict", makeUnownedConflict, "refusal.unowned-harness-target"},
+	{"modified", makeModified, "refusal.modified-harness-target"},
+	{"incompatible unparseable stamp", makeIncompatibleUnparseable, "refusal.incompatible-harness-target"},
+	{"incompatible schemaVersion", makeIncompatibleSchemaVersion, "refusal.incompatible-harness-target"},
+}
+
+// TestInstall_RefusalCodes asserts that install refuses each of the three
+// unsafe states with its own code and exit 3, names --force in the
+// message (naming what it would do to that state's content), and that
+// --force still overwrites regardless of which state refused it.
+func TestInstall_RefusalCodes(t *testing.T) {
+	for _, c := range refusalCases {
+		t.Run(c.name, func(t *testing.T) {
+			skills := t.TempDir()
+			env := []string{"TOOLSMITH_CLAUDE_SKILLS_DIR=" + skills}
+			c.setup(t, skills, env)
+
+			r := run(t, env, "install", "claude-code", "--json")
+			if r.exitCode != 3 {
+				t.Fatalf("install: exit=%d, want 3 (refusal); stderr=%q", r.exitCode, r.stderr)
+			}
+			if r.stdout != "" {
+				t.Fatalf("stdout = %q, want empty on failure", r.stdout)
+			}
+			envelope := parseErrorEnvelope(t, r.stderr)
+			if envelope.Error.Code != c.code {
+				t.Fatalf("error code = %q, want %q", envelope.Error.Code, c.code)
+			}
+			if !strings.Contains(envelope.Error.Message, "--force") {
+				t.Fatalf("install refusal message = %q, want it to name --force", envelope.Error.Message)
+			}
+
+			if r := run(t, env, "install", "claude-code", "--force"); r.exitCode != 0 {
+				t.Fatalf("install --force over %s: exit=%d stderr=%q", c.name, r.exitCode, r.stderr)
+			}
+		})
+	}
+}
+
+// TestUninstall_RefusalCodes asserts that uninstall refuses each of the
+// same three unsafe states with its own code and exit 3, and that — since
+// uninstall has no --force — its message never names it.
+func TestUninstall_RefusalCodes(t *testing.T) {
+	for _, c := range refusalCases {
+		t.Run(c.name, func(t *testing.T) {
+			skills := t.TempDir()
+			env := []string{"TOOLSMITH_CLAUDE_SKILLS_DIR=" + skills}
+			c.setup(t, skills, env)
+
+			r := run(t, env, "uninstall", "claude-code", "--json")
+			if r.exitCode != 3 {
+				t.Fatalf("uninstall: exit=%d, want 3 (refusal); stderr=%q", r.exitCode, r.stderr)
+			}
+			if r.stdout != "" {
+				t.Fatalf("stdout = %q, want empty on failure", r.stdout)
+			}
+			envelope := parseErrorEnvelope(t, r.stderr)
+			if envelope.Error.Code != c.code {
+				t.Fatalf("error code = %q, want %q", envelope.Error.Code, c.code)
+			}
+			if strings.Contains(envelope.Error.Message, "--force") {
+				t.Fatalf("uninstall refusal message = %q, want it not to name --force (uninstall has none)", envelope.Error.Message)
+			}
+		})
+	}
+}
+
+// TestUninstall_EmptyDirNoStamp_NotFound asserts that an existing but
+// empty, unstamped install directory reads as Missing (C4.5 §1.4: it used
+// to be a refusal) and so uninstall reports not-found, exit 1, not a
+// refusal.
+func TestUninstall_EmptyDirNoStamp_NotFound(t *testing.T) {
+	skills := t.TempDir()
+	env := []string{"TOOLSMITH_CLAUDE_SKILLS_DIR=" + skills}
+	skillDir := filepath.Join(skills, "toolsmith")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	r := run(t, env, "uninstall", "claude-code", "--json")
+	if r.exitCode != 1 {
+		t.Fatalf("uninstall on an empty, unstamped directory: exit=%d, want 1 (not-found); stderr=%q", r.exitCode, r.stderr)
+	}
+	envelope := parseErrorEnvelope(t, r.stderr)
+	if envelope.Error.Code != "not-found.harness-not-installed" {
+		t.Fatalf("error code = %q, want not-found.harness-not-installed", envelope.Error.Code)
+	}
+}
+
+// TestInstallAll_OneRefused drives the bare `install` (no harness name)
+// path against a refused target. The skeleton's registry lists exactly
+// one harness, so refusing it also refuses the whole run: each per-target
+// result carries its own refusal code in the results JSON on stdout, and
+// the closing summary error on stderr carries the shared
+// refusal.harness-targets-refused code (C4.5 §1.4).
+func TestInstallAll_OneRefused(t *testing.T) {
+	skills := t.TempDir()
+	env := []string{"TOOLSMITH_CLAUDE_SKILLS_DIR=" + skills}
+	makeUnownedConflict(t, skills, env)
+
+	r := run(t, env, "install", "--json")
+	if r.exitCode != 3 {
+		t.Fatalf("bare install: exit=%d, want 3 (refusal); stderr=%q", r.exitCode, r.stderr)
+	}
+
+	var payload struct {
+		Results []struct {
+			Harness string `json:"harness"`
+			Status  string `json:"status"`
+			Error   *struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+			} `json:"error"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal([]byte(r.stdout), &payload); err != nil {
+		t.Fatalf("stdout is not one JSON value: %v; stdout=%q", err, r.stdout)
+	}
+	found := false
+	for _, res := range payload.Results {
+		if res.Harness != "claude-code" {
+			continue
+		}
+		found = true
+		if res.Status != "refused" {
+			t.Fatalf("claude-code result status = %q, want refused", res.Status)
+		}
+		if res.Error == nil || res.Error.Code != "refusal.unowned-harness-target" {
+			t.Fatalf("claude-code result error = %+v, want code refusal.unowned-harness-target", res.Error)
+		}
+	}
+	if !found {
+		t.Fatalf("no claude-code result in %+v", payload.Results)
+	}
+
+	envelope := parseErrorEnvelope(t, r.stderr)
+	if envelope.Error.Code != "refusal.harness-targets-refused" {
+		t.Fatalf("error code = %q, want refusal.harness-targets-refused", envelope.Error.Code)
+	}
+}

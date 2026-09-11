@@ -10,7 +10,7 @@ import (
 	"io"
 )
 
-// Error carries a stable machine token (e.g. "refusal.unstamped-harness-target")
+// Error carries a stable machine token (e.g. "refusal.modified-harness-target")
 // distinct from the process exit code, and the human-readable message.
 // exitcode.FromError reads the Code prefix to pick the exit code; Render
 // drops Message into the fixed envelope unchanged.
