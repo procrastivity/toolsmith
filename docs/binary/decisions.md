@@ -138,6 +138,22 @@ from this repo.
 admit a one-line description and a fixed `plugin.json` suffix, or move both
 strings to assets.
 
+**Resolution (contract-v1-2-reconcile step-10, step-11):** the two strings
+got different answers, because only one of them is prose.
+
+- The description moved to an asset,
+  `assets/templates/skills/claude-code/description.txt`, and resolves
+  through the asset chain. It decides whether an agent loads the skill, so
+  it is tunable prose under C5.1. The skeleton's copy is a `TODO(toolname)`
+  placeholder with an `excludedPair` in the drift gate. toolsmith's
+  generated `SKILL.md` did not change.
+- The `plugin.json` suffix stays in code. C4.4 now says that fixed template
+  text around manifest fields is generated output, not hand-written
+  content (T27). That sentence clarifies the clause and adds no
+  requirement, so the contract version does not move.
+
+Both package comments lost the "tension" wording, and they now cite T27.
+
 ### C4.5 — only `current` of the six drift states is produced (chassis, contract)
 
 **The clause:** drift is described as `current | missing | stale |

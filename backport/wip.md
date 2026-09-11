@@ -127,6 +127,25 @@ both answers conform. Decide explicitly:
 An undecided third state is the only wrong answer, because it reads to
 the next person as an unfinished feature.
 
+**11. The skill description is an inline format string in six targets (C4.4, T27).**
+Each of wip's six harness targets writes its `SKILL.md` frontmatter
+description from the same Go format string, `"description: Track and drive
+%s work — Matters, Stages, Steps — through its verb surface.\n"`:
+`internal/harness/{claudecode,codex,opencode,pi,devin,amp}/*.go`. The
+description decides whether an agent loads the skill, so it is tunable
+prose (C5.1), and C4.4 sends hand-written prose through the asset chain.
+T27 does not cover it: T27 exempts fixed template text around manifest
+fields, and this sentence is prose with the tool name inside it.
+
+toolsmith's chassis moved its copy to
+`assets/templates/skills/claude-code/description.txt`
+(contract-v1-2-reconcile step-10). A shared asset for all six targets fits
+wip better than six copies, which item 6's copied `install.go` already
+shows the cost of.
+
+claude-code's `plugin.json` suffix, `"%s's own generated plumbing-verb
+skill."`, conforms under T27 as it is.
+
 ---
 
 ## Not a defect
