@@ -22,10 +22,12 @@ package new
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
+	"github.com/procrastivity/toolsmith/internal/cliflags"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
 	"github.com/procrastivity/toolsmith/internal/surface"
 )
@@ -58,7 +60,7 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 		Long: "instantiate the chassis skeleton as a new tool.\n\n" +
 			"<name> becomes the binary name, the Go package names, the environment-variable prefix, and the paths: lowercase letters and digits, starting with a letter.",
 		Args: cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			p, err := validate(args[0], targetDir, module, noGit)
 			if err != nil {
 				return err
@@ -97,6 +99,23 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 				}
 			}
 
+			// --json binds once at root, so every verb honors it rather
+			// than silently ignoring it (C2.3). The JSON value replaces
+			// the checklist, so stdout still carries one thing (C2.2).
+			if cliflags.FromContext(cmd.Context()).JSON {
+				b, err := json.Marshal(jsonResult{
+					Name:   p.name,
+					Dir:    p.targetDir,
+					Module: p.module,
+					Git:    p.doGit,
+				})
+				if err != nil {
+					return err
+				}
+				_, err = fmt.Fprintln(streams.Out, string(b))
+				return err
+			}
+
 			_, err = fmt.Fprint(streams.Out, checklist(p))
 			return err
 		},
@@ -113,6 +132,17 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 
 	surface.Annotate(cmd, surface.Plumbing)
 	return cmd
+}
+
+// jsonResult is new's --json success payload (C2.3): the instantiated
+// tool's name, its target directory exactly as the caller wrote it, its
+// module path, and whether a git repository was created and committed
+// (false with --no-git).
+type jsonResult struct {
+	Name   string `json:"name"`
+	Dir    string `json:"dir"`
+	Module string `json:"module"`
+	Git    bool   `json:"git"`
 }
 
 // checklist is the verb's entire stdout contract, byte for byte (port
