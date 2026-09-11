@@ -73,14 +73,14 @@ type params struct {
 // it explicitly.
 func validate(name, targetDir, module string, noGit bool) (params, error) {
 	if name == "" {
-		return params{}, toolsmitherr.New("new.missing-name", "a tool name is required")
+		return params{}, toolsmitherr.New("validation.missing-name", "a tool name is required")
 	}
 	if !namePattern.MatchString(name) {
-		return params{}, toolsmitherr.New("new.invalid-name",
+		return params{}, toolsmitherr.New("validation.invalid-name",
 			fmt.Sprintf("name must be lowercase letters and digits, starting with a letter (it becomes Go package names): got %q", name))
 	}
 	if name == namePlaceholder {
-		return params{}, toolsmitherr.New("new.placeholder-name",
+		return params{}, toolsmitherr.New("validation.placeholder-name",
 			fmt.Sprintf("%q is the placeholder itself; pick a real name", namePlaceholder))
 	}
 
@@ -263,10 +263,16 @@ func internalErr(format string, args ...any) error {
 // is a single `[[ -d "$repo/assets/_skeleton" ]]` against the repository it
 // lives in (port spec §2.2); a binary has no repository, so the chain is
 // what stands in for it (C5.1, D6 in docs/binary/parity-divergences.md).
+//
+// The error is internal.*, not not-found.* (C2.5). asset.Tree returns an
+// override or shipped-default directory whenever one exists and falls
+// through when it does not, so no user action reaches this branch: it
+// fires only when the embedded fallback lacks _skeleton, which a correct
+// build cannot produce.
 func skeletonTree() (fs.FS, bool, error) {
 	tree, source, err := asset.Tree(skeletonPrefix)
 	if err != nil {
-		return nil, false, toolsmitherr.New("new.no-skeleton", "skeleton not found: "+err.Error())
+		return nil, false, toolsmitherr.New("internal.skeleton-missing", "skeleton not found: "+err.Error())
 	}
 	return tree, source == asset.SourceEmbedded, nil
 }

@@ -70,11 +70,11 @@ func TestValidateOrderAndCodes(t *testing.T) {
 		dir      string
 		wantCode string
 	}{
-		{"empty name", "", "", "new.missing-name"},
-		{"uppercase", "Acme", "", "new.invalid-name"},
-		{"leading digit", "1acme", "", "new.invalid-name"},
-		{"hyphen", "ac-me", "", "new.invalid-name"},
-		{"the placeholder itself", "toolname", "", "new.placeholder-name"},
+		{"empty name", "", "", "validation.missing-name"},
+		{"uppercase", "Acme", "", "validation.invalid-name"},
+		{"leading digit", "1acme", "", "validation.invalid-name"},
+		{"hyphen", "ac-me", "", "validation.invalid-name"},
+		{"the placeholder itself", "toolname", "", "validation.placeholder-name"},
 		{"existing target", "acme", existing, "refusal.target-exists"},
 	}
 	for _, c := range cases {
