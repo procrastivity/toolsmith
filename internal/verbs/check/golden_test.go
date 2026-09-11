@@ -355,12 +355,24 @@ func checkCases(t *testing.T) []checkCase {
 	})
 
 	cases = append(cases, checkCase{
-		name:  "probe-c62-mislabel",
-		setup: generateC62MislabelProbe,
+		name:  "probe-c62-no-cliff",
+		setup: generateC62NoCliffProbe,
+		invariant: func(t *testing.T, stdout string) {
+			t.Helper()
+			if strings.Contains(stdout, "C6.3:") {
+				t.Errorf("port spec §9.6 (step-18): a Makefile-only repo's cliff.toml condition was reported under C6.3, not C6.2:\n%s", stdout)
+			}
+		},
 	})
 	cases = append(cases, checkCase{
-		name:  "probe-c62-hole",
-		setup: generateC62HoleProbe,
+		name:  "probe-c62-no-makefile",
+		setup: generateC62NoMakefileProbe,
+		invariant: func(t *testing.T, stdout string) {
+			t.Helper()
+			if !strings.Contains(stdout, `cliff.toml tag_pattern is not "v[0-9]*"`) {
+				t.Errorf("port spec §9.6 (step-18): a cliff.toml-only repo did not audit the C6.2 tag_pattern condition:\n%s", stdout)
+			}
+		},
 	})
 	cases = append(cases, checkCase{
 		name:  "probe-changelog-tracked",
@@ -422,12 +434,18 @@ const probeSHA = "0123456789abcdef0123456789abcdef01234567"
 // §9.4 multiple-cmd/ note.
 var cleanRunStderr = regexp.MustCompile(`\A(note: multiple cmd/ entries \([^)]*\); auditing as "[^"]*"\n)?\z`)
 
-func generateC62MislabelProbe(t *testing.T, dir string) {
+// generateC62NoCliffProbe exercises tagNamespace's no-cliff.toml branch
+// (port spec §9.6, corrected at step-18): Makefile present, no
+// cliff.toml.
+func generateC62NoCliffProbe(t *testing.T, dir string) {
 	t.Helper()
 	mustWriteFile(t, dir, "Makefile", "")
 }
 
-func generateC62HoleProbe(t *testing.T, dir string) {
+// generateC62NoMakefileProbe exercises tagNamespace's cliff.toml-only
+// branch (port spec §9.6, corrected at step-18): cliff.toml present, no
+// Makefile.
+func generateC62NoMakefileProbe(t *testing.T, dir string) {
 	t.Helper()
 	mustWriteFile(t, dir, "cliff.toml", "")
 }

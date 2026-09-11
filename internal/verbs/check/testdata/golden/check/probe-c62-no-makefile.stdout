@@ -1,10 +1,10 @@
 C1.2: no cmd/<tool> main package found
-C1.1: Makefile does not set CGO_ENABLED=0
+C1.1: no Makefile
 C1.6: no flake.nix
 C1.6: no .envrc
 C2.1: no .golangci.yml
 C3.1: cannot run the manifest verb (need go, go.mod, and cmd/<tool>)
-C6.3: no cliff.toml (changelog is not derivable from tags)
+C6.2: cliff.toml tag_pattern is not "v[0-9]*"
 C6.5: no .github/workflows/ci.yml
 C6.5: no .github/workflows/release.yml
 C6.6: no contrib/check-commit-msg hook

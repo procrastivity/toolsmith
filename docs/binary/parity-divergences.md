@@ -368,7 +368,16 @@ Two entries had work attached to them at that point:
 
 - **R1** — `step-18` corrects the C6.2 label and closes the coverage
   hole. Both changes are only safe now that the gate no longer requires
-  the port to match the oracle.
+  the port to match the oracle. The correction landed at step-18:
+  `tagNamespace` now audits Makefile and cliff.toml independently, so a
+  Makefile-only repo reports its own `C6.2` finding plus
+  `C6.2: no cliff.toml (no tag_pattern for git describe --match to agree
+  with)` in place of the old mislabeled `C6.3` line, and a
+  cliff.toml-only repo now reports `C6.2: cliff.toml tag_pattern is not
+  "v[0-9]*"` when it fails to match, closing the hole. The two generated
+  probes are renamed for what they exercise rather than for the defect
+  they used to expose: `probe-c62-mislabel` is `probe-c62-no-cliff`, and
+  `probe-c62-hole` is `probe-c62-no-makefile`.
 - **D3, D4** — the divergent exit codes and the defaulted path became
   plain behavior, described by the tool's own tests rather than by a
   boundary drawn against an oracle.

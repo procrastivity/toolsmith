@@ -117,7 +117,8 @@ func TestCheck_FindingsPath(t *testing.T) {
 		"C1.6: no .envrc\n" +
 		"C2.1: no .golangci.yml\n" +
 		"C3.1: cannot run the manifest verb (need go, go.mod, and cmd/<tool>)\n" +
-		"C6.3: no cliff.toml (changelog is not derivable from tags)\n" +
+		"C6.2: Makefile git describe lacks --match 'v[0-9]*'\n" +
+		"C6.2: no cliff.toml (no tag_pattern for git describe --match to agree with)\n" +
 		"C6.5: no .github/workflows/ci.yml\n" +
 		"C6.5: no .github/workflows/release.yml\n" +
 		"C6.6: no contrib/check-commit-msg hook\n" +
@@ -129,7 +130,7 @@ func TestCheck_FindingsPath(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("exit code = %d, want 1", code)
 	}
-	wantSummary := fmt.Sprintf("10 finding(s) for %s\n", wantRepo)
+	wantSummary := fmt.Sprintf("11 finding(s) for %s\n", wantRepo)
 	if stderr != wantSummary {
 		t.Fatalf("stderr = %q, want %q", stderr, wantSummary)
 	}

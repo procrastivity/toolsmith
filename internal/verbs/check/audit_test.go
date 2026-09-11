@@ -27,7 +27,7 @@ func TestAudit_EmptyRepo(t *testing.T) {
 		{"C1.6", "no .envrc"},
 		{"C2.1", "no .golangci.yml"},
 		{"C3.1", "cannot run the manifest verb (need go, go.mod, and cmd/<tool>)"},
-		{"C6.3", "no cliff.toml (changelog is not derivable from tags)"},
+		{"C6.2", "no cliff.toml (no tag_pattern for git describe --match to agree with)"},
 		{"C6.5", "no .github/workflows/ci.yml"},
 		{"C6.5", "no .github/workflows/release.yml"},
 		{"C6.6", "no contrib/check-commit-msg hook"},
@@ -62,57 +62,80 @@ func TestAudit_MultipleCmdEntries(t *testing.T) {
 	}
 }
 
-// TestAudit_TagNamespaceElseBranch pins the §9.6 mislabel and coverage
-// hole exactly, per the ruling in port-spec.md §1 item 1: reproduced on
-// purpose, not a bug in the port.
-func TestAudit_TagNamespaceElseBranch(t *testing.T) {
-	t.Run("repro A: Makefile present, cliff.toml missing reports the mislabeled C6.3", func(t *testing.T) {
-		repo := t.TempDir()
-		writeFile(t, repo, "Makefile", "irrelevant\n")
-		a := &auditor{repo: repo}
-		a.tagNamespace()
-		want := []Finding{{"C6.3", "no cliff.toml (changelog is not derivable from tags)"}}
-		if !reflect.DeepEqual(a.findings, want) {
-			t.Fatalf("findings = %v, want %v", a.findings, want)
-		}
-	})
+// TestAudit_TagNamespace pins tagNamespace's C6.2 behavior after step-18
+// (toolsmith-binary Stage 8) corrected the ported oracle's mislabel and
+// closed its coverage hole (port spec §9.6; parity-divergences.md R1):
+// each file is audited independently when present, and a missing
+// Makefile reports nothing here because cgoEnabled already owns "no
+// Makefile" under C1.1.
+func TestAudit_TagNamespace(t *testing.T) {
+	noCliff := Finding{"C6.2", "no cliff.toml (no tag_pattern for git describe --match to agree with)"}
+	badMakefile := Finding{"C6.2", "Makefile git describe lacks --match 'v[0-9]*'"}
+	badCliff := Finding{"C6.2", `cliff.toml tag_pattern is not "v[0-9]*"`}
 
-	t.Run("repro B: cliff.toml present, Makefile missing reports nothing", func(t *testing.T) {
-		repo := t.TempDir()
-		writeFile(t, repo, "cliff.toml", `tag_pattern = "v[0-9]*"`+"\n")
-		a := &auditor{repo: repo}
-		a.tagNamespace()
-		if len(a.findings) != 0 {
-			t.Fatalf("findings = %v, want none (the C6.2 coverage hole)", a.findings)
-		}
-	})
+	tests := []struct {
+		name      string
+		makefile  *string
+		cliffToml *string
+		want      []Finding
+	}{
+		{
+			name:      "Makefile only, non-conformant: its own finding plus no-cliff",
+			makefile:  strPtr("\tgit describe\n"),
+			cliffToml: nil,
+			want:      []Finding{badMakefile, noCliff},
+		},
+		{
+			name:      "cliff.toml only, non-conformant: tag_pattern finding only",
+			makefile:  nil,
+			cliffToml: strPtr("tag_pattern = \"v*\"\n"),
+			want:      []Finding{badCliff},
+		},
+		{
+			name:      "cliff.toml only, conformant: no findings",
+			makefile:  nil,
+			cliffToml: strPtr(`tag_pattern = "v[0-9]*"` + "\n"),
+			want:      nil,
+		},
+		{
+			name:      "neither file: only the no-cliff finding",
+			makefile:  nil,
+			cliffToml: nil,
+			want:      []Finding{noCliff},
+		},
+		{
+			name:      "both present, both conformant: no findings",
+			makefile:  strPtr("\tgit describe --match 'v[0-9]*'\n"),
+			cliffToml: strPtr(`tag_pattern = "v[0-9]*"` + "\n"),
+			want:      nil,
+		},
+		{
+			name:      "both present, neither conformant: two findings, Makefile then cliff.toml",
+			makefile:  strPtr("\tgit describe\n"),
+			cliffToml: strPtr("tag_pattern = \"v*\"\n"),
+			want:      []Finding{badMakefile, badCliff},
+		},
+	}
 
-	t.Run("both present and conformant: no findings", func(t *testing.T) {
-		repo := t.TempDir()
-		writeFile(t, repo, "Makefile", "\tgit describe --match 'v[0-9]*'\n")
-		writeFile(t, repo, "cliff.toml", `tag_pattern = "v[0-9]*"`+"\n")
-		a := &auditor{repo: repo}
-		a.tagNamespace()
-		if len(a.findings) != 0 {
-			t.Fatalf("findings = %v, want none", a.findings)
-		}
-	})
-
-	t.Run("both present, neither conformant", func(t *testing.T) {
-		repo := t.TempDir()
-		writeFile(t, repo, "Makefile", "\tgit describe\n")
-		writeFile(t, repo, "cliff.toml", "tag_pattern = \"v*\"\n")
-		a := &auditor{repo: repo}
-		a.tagNamespace()
-		want := []Finding{
-			{"C6.2", "Makefile git describe lacks --match 'v[0-9]*'"},
-			{"C6.2", `cliff.toml tag_pattern is not "v[0-9]*"`},
-		}
-		if !reflect.DeepEqual(a.findings, want) {
-			t.Fatalf("findings = %v, want %v", a.findings, want)
-		}
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := t.TempDir()
+			if tc.makefile != nil {
+				writeFile(t, repo, "Makefile", *tc.makefile)
+			}
+			if tc.cliffToml != nil {
+				writeFile(t, repo, "cliff.toml", *tc.cliffToml)
+			}
+			a := &auditor{repo: repo}
+			a.tagNamespace()
+			if !reflect.DeepEqual(a.findings, tc.want) {
+				t.Fatalf("findings = %v, want %v", a.findings, tc.want)
+			}
+		})
+	}
 }
+
+func strPtr(s string) *string { return &s }
 
 // TestCheckManifestDoc covers §9.1's "parse, don't grep" field checks
 // against synthetic manifest documents, including the case the oracle's

@@ -298,35 +298,36 @@ func checkManifestDoc(raw []byte) []Finding {
 // variable-width).
 var cliffTagPattern = regexp.MustCompile(`tag_pattern *= *"v\[0-9\]\*"`)
 
-// tagNamespace reproduces the oracle's C6.2/C6.3 checks (port spec §4.1
-// step 6), the mislabel and coverage hole included.
+// tagNamespace checks C6.2's git-describe/cliff.toml tag-pattern
+// agreement. Each file is audited independently when present: a Makefile
+// lacking `--match 'v[0-9]*'`, or a cliff.toml whose tag_pattern isn't
+// `"v[0-9]*"`, each reports its own C6.2 finding, Makefile first. A
+// missing Makefile reports nothing here: cgoEnabled above already owns
+// "no Makefile" under C1.1, and a missing file is reported once, under
+// the clause that owns its existence. A missing cliff.toml has no other
+// owner, so it is what this function reports under C6.2 — there is no
+// tag_pattern for --match to agree with.
 //
-// This is still the oracle's behavior (port spec §9.6, parity-divergences.md
-// R1), pinned by the probe-c62-mislabel and probe-c62-hole goldens
-// (internal/verbs/check/golden_test.go, testdata/golden/check/). Two
-// consequences of the oracle's guard being `Makefile && cliff.toml` while
-// its else only re-tests cliff.toml: a repo with a Makefile and no
-// cliff.toml reports the real C6.2 condition under the C6.3 label
-// (mislabel, repro A); a repo with a cliff.toml and no Makefile reports
-// nothing from this whole block, so the C6.2 --match/tag_pattern
-// agreement goes silently unaudited (coverage hole, repro B) — has_file
-// cliff.toml is true, so find_it is never reached. Correcting the label
-// and closing the hole is a deliberate output change: it updates both
-// goldens above and the R1 entry in docs/binary/parity-divergences.md.
+// Until step-18 (toolsmith-binary Stage 8), this guarded the whole
+// comparison on Makefile AND cliff.toml both being present, so a
+// Makefile-only repo reported the condition under the wrong label (C6.3)
+// and a cliff.toml-only repo reported nothing at all — an oracle defect
+// reproduced for the parity window (port spec §9.6; parity-divergences.md
+// R1). Cutover retired the gate that required carrying it, so step-18
+// corrected the label and closed the hole; the probe-c62-no-cliff and
+// probe-c62-no-makefile goldens (golden_test.go) pin the corrected shape.
 func (a *auditor) tagNamespace() {
-	hasMakefile := a.isFile("Makefile")
-	hasCliff := a.isFile("cliff.toml")
-	if hasMakefile && hasCliff {
+	if a.isFile("Makefile") {
 		if !bytes.Contains(a.read("Makefile"), []byte(`--match 'v[0-9]*'`)) {
 			a.find("C6.2", "Makefile git describe lacks --match 'v[0-9]*'")
 		}
-		if !cliffTagPattern.Match(a.read("cliff.toml")) {
-			a.find("C6.2", `cliff.toml tag_pattern is not "v[0-9]*"`)
-		}
+	}
+	if !a.isFile("cliff.toml") {
+		a.find("C6.2", "no cliff.toml (no tag_pattern for git describe --match to agree with)")
 		return
 	}
-	if !hasCliff {
-		a.find("C6.3", "no cliff.toml (changelog is not derivable from tags)")
+	if !cliffTagPattern.Match(a.read("cliff.toml")) {
+		a.find("C6.2", `cliff.toml tag_pattern is not "v[0-9]*"`)
 	}
 }
 
@@ -402,8 +403,9 @@ func (a *auditor) workflows() {
 // On a CRLF workflow file the oracle therefore tests `<40 hex>\r` against
 // its SHA pattern, fails, and reports a correctly pinned action as not
 // SHA-pinned. That is a false finding, so the port does not reproduce it —
-// unlike the C6.2 mislabel of §9.6, which is reproduced because the
-// condition it reports is real. Do not "restore" the carriage return.
+// unlike the C6.2 else-branch's old mislabel (§9.6), which was reproduced
+// through the parity window because the condition it reported was real,
+// only its label was wrong. Do not "restore" the carriage return.
 func shaPinFindings(wf string, data []byte) []Finding {
 	var findings []Finding
 	scanner := bufio.NewScanner(bytes.NewReader(data))
