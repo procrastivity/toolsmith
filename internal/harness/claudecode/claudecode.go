@@ -2,18 +2,17 @@
 // directory plus a .claude-plugin/plugin.json in the same directory — the
 // "skills-dir as plugin" mechanism: no marketplace manifest, no separate
 // registry entry. Everything in the generated tree traces back to the
-// manifest except one verbatim, hand-authored string: renderPluginJSON's
-// fixed "...'s own generated plumbing-verb skill." suffix. Three other
-// hand-authored strings ride the asset chain as C4.4 describes: the
-// per-harness judgment paragraph (this harness's own to revise), the
-// shared agent-guidance paragraph (shared across every future harness
-// target, and not this package's to rewrite), and skillDescriptionAsset
-// below — this harness's own one-line trigger sentence, and the most
-// tunable of the three, since it decides whether an agent loads the
-// skill at all (C5.1). C4.4's text names only those three, so the
-// plugin.json suffix is a tension with the clause rather than a
-// conformance to it — see the Stage 6 finding on the toolsmith-binary
-// Matter.
+// manifest or to an asset. Three hand-authored texts ride the asset chain
+// as C4.4 describes: the per-harness judgment paragraph (this harness's
+// own to revise), the shared agent-guidance paragraph (shared across every
+// future harness target, and not this package's to rewrite), and
+// skillDescriptionAsset below, the most tunable of the three, since it
+// decides whether an agent loads the skill at all (C5.1). The rest is
+// fixed template text around manifest fields — the SKILL.md headings and
+// renderPluginJSON's "...'s own generated plumbing-verb skill." format
+// string — which C4.4 counts as generated output, not hand-written
+// content (T27). Rejected: moving that format string to an asset. It is
+// not prose, and an override of it could make plugin.json invalid.
 package claudecode
 
 import (

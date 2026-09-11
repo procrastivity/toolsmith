@@ -162,7 +162,9 @@ marked **[check]** are mechanically verifiable.
   files: {path: sha256}}`. Everything generated is stamped; the only
   hand-written content in any projection is the per-harness judgment
   prose and shared guidance, which ride as assets (C5) and are stamped
-  like everything else once rendered.
+  like everything else once rendered. Fixed template text in a generator
+  (headings, labels, and format strings around manifest fields) is
+  generated output, not hand-written content (T27).
 - **C4.5** Drift is described with the six-state vocabulary (adopted
   from duo, T6): `current | missing | stale | modified |
   unowned_conflict | incompatible`. wip's three-way

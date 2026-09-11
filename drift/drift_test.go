@@ -421,12 +421,6 @@ var internalTextExemptions = []textExemption{
 		replacement: "const Contract = \"toolsmith/v1\"\n",
 		reason:      "the skeleton keeps Contract = \"toolsmith/v1\" because a tool conforms to toolsmith's contract, not its own; the substitution would otherwise wrongly turn it into toolname/v1",
 	},
-	{
-		path:        "harness/claudecode/claudecode.go",
-		present:     "// conformance to it — see the Stage 6 finding on the toolname-binary\n// Matter.\n",
-		replacement: "// conformance to it.\n",
-		reason:      "toolsmith's copy carries one extra sentence in the package comment citing the toolsmith-binary Matter; a generated tool must not cite toolsmith's own Matter register",
-	},
 }
 
 // rootPathExemptions, rootExcludedPairs and rootTextExemptions together are
