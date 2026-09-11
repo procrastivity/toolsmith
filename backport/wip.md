@@ -91,6 +91,10 @@ and it maps in, but the tool-level states —
 skeleton, and this contract all speak. The per-file report stays; it
 becomes the detail under `modified`.
 
+(contract-v1-2-reconcile step-17) The claim that the skeleton spoke the six
+states was wrong when this was written: the skeleton carried wip's floor
+and produced only `current`. It speaks them now. Item 14 gives the port.
+
 **8. `docs/install-target-devin.md` is untracked and stale.**
 It is a completed handoff (the Devin target shipped) sitting outside
 git. Its grep list names `claude-code, codex, pi, opencode` — it
@@ -164,6 +168,29 @@ wip's one code outside C2.5's five prefixes is `doctor.findings-present`
 that form, `<verb>.findings-present` with exit 1, for a verb whose findings
 are its verdict. Nothing in wip moves. Recorded so that nobody renames the
 code into `validation.*`, which the ruling rejected.
+
+**14. Port the six drift states and the split refusal (C4.5, C4.6, C4.7).**
+wip still carries the code toolsmith's chassis had before this change.
+`internal/harness/handedit.go:43,52` and
+`internal/harness/claudecode/install.go:77,86` return one
+`refusal.unstamped-harness-target` for two different risks: foreign files
+with no stamp, and a tree a user edited. `--force` overwrites files wip
+never wrote in the first case, and destroys the user's edits in the
+second. Only the message tells them apart.
+
+toolsmith's chassis replaced that code (contract-v1-2-reconcile steps 14
+to 16, design in `docs/contract-v1-2-reconcile/decisions.md` §1):
+
+- `harness.Status(dir, files)` derives `current`, `missing`, `stale`,
+  `modified`, `unowned_conflict` or `incompatible`, in an order that puts
+  the unsafe states first. `manifest.ErrStampUnparseable` lets an
+  unparseable stamp read as `incompatible`, and not as an error.
+- `harness.Refusal` returns `refusal.unowned-harness-target`,
+  `refusal.modified-harness-target` or `refusal.incompatible-harness-target`.
+- `doctor` reports each target's state, and only `incompatible` fails it.
+
+wip has six targets, so the port touches each target's `install.go` (item
+6). The `harness` and `checks` files port unchanged.
 
 ---
 

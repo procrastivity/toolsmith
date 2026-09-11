@@ -8,8 +8,8 @@ the same sidecar. The Matter register is wip (T22), so the Body, Workplan,
 Stages, Steps and findings live there. This file records what building the
 Matter forced that CONTRACT.md does not say (C7.1).
 
-**Status: the C4.5 design is recorded (step-13). The reconciliation pass
-against v1.2 is not yet run.**
+**Status: the C4.5 design is recorded (step-13) and built (steps 14 to 16).
+The reconciliation pass against v1.2 is not yet run.**
 
 ---
 
@@ -73,8 +73,11 @@ Rejected: a second exported function for the disk-only question. Its
 `current` would mean something narrower than `Status`'s `current`, under the
 same name.
 
-`IsCurrent(dir, files)` becomes `Status(dir, files) == current`.
-`RefuseHandEdited` is removed. Its two cases are now two states.
+`IsCurrent(dir, files)` became `Status(dir, files) == current` at step-14.
+Step-15 deleted it, because `install` then called `Status` itself and no
+caller was left. `RefuseHandEdited` is removed, and its two cases are now
+two states. `harness.Risk` words the fact behind each unsafe state once, for
+both `install`'s refusal and `doctor`'s finding (step-16).
 
 ### 1.4 Refusals
 
@@ -141,5 +144,6 @@ is a finding.
 
 ## Where this stands
 
-The C4.5 design is recorded. Steps 14 to 17 build it in both trees. The
+The C4.5 design is built in both trees: `harness.Status` (step-14), the
+split refusals (step-15), and doctor's per-target states (step-16). The
 reconciliation pass against v1.2 (step-18) extends this file.

@@ -222,6 +222,20 @@ states in the chassis, or amend C4.5 to require the floor and name the six
 states as the target. Either way, correct the `drift.go` comment in both
 trees.
 
+**Resolution (contract-v1-2-reconcile step-14, step-15, step-16):** the
+chassis implements all six states, and C4.5 does not change.
+`docs/contract-v1-2-reconcile/decisions.md` §1 records the design.
+
+- `harness.Status` derives the state from the three C4.6 comparisons and
+  the stamp's `schemaVersion`, and `drift.go`'s comment now points at it.
+- The shared refusal split into `refusal.unowned-harness-target`,
+  `refusal.modified-harness-target` and
+  `refusal.incompatible-harness-target`. `install` names what `--force`
+  does for each, and `uninstall` says to remove the tree by hand.
+- `doctor` reports every target's state. Only `incompatible` fails the run.
+  `modified` and `unowned_conflict` are advisory, and a hand-edited install
+  is no longer silent.
+
 ### C7.1 — this file did not exist (contract, playbook)
 
 **The clause:** `docs/<matter>/decisions.md` records what building a
