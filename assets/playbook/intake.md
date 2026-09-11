@@ -6,6 +6,10 @@ contract slots, and write down what you cannot decide alone. The output
 of intake is a filled **intake sheet** (bottom of this page) — it seeds
 the packaging appendix and the handoff.
 
+Every page this playbook names is read with `toolsmith doc <name>` (for
+example, `toolsmith doc playbook/migrate.md`); `toolsmith doc` on its
+own lists them all.
+
 Rule of engagement: when classification is ambiguous, **ask the owner**
 — the questions list per shape below is what to ask. Do not guess a
 tool's purpose from its prompts.
@@ -37,7 +41,7 @@ Walk the source and list every part into one of these bins:
   surface with an existing output contract. Decide per script: port
   (users/agents call it) or keep as dev-only tooling (ste9 kept
   extract.py). Ported scripts with consumers get a **parity gate**
-  (assets/playbook/parity-gate.md) and a **port spec** (assets/playbook/port-spec.md).
+  (playbook/parity-gate.md) and a **port spec** (playbook/port-spec.md).
 - **Plugin with hooks/commands**: hooks map to C4.10 shims; slash
   commands usually collapse into the generated skill's verb table.
 - **Marketplace of several skills**: decide the tool boundary first —
@@ -97,5 +101,5 @@ Harnesses v1: <default claude-code>
 Open questions: <what the owner has not yet answered>
 ```
 
-Then continue with assets/playbook/migrate.md (existing tool) or
-assets/playbook/bootstrap.md (nothing worth treating as an oracle).
+Then continue with playbook/migrate.md (existing tool) or
+playbook/bootstrap.md (nothing worth treating as an oracle).

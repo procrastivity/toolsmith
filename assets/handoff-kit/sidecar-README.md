@@ -30,8 +30,8 @@ are not.
 
 ```
 mkdir ../<tool>-reboot && cd ../<tool>-reboot && git init
-cp <toolsmith>/assets/handoff-kit/HANDOFF-template.md    HANDOFF.md
-cp <toolsmith>/assets/handoff-kit/SEED-CARDS-template.md SEED-CARDS.md
+toolsmith doc handoff-kit/HANDOFF-template.md    > HANDOFF.md
+toolsmith doc handoff-kit/SEED-CARDS-template.md > SEED-CARDS.md
 mkdir workplans     # only when the conversion has no tracker — see below
 ```
 
@@ -41,7 +41,7 @@ Then add whatever design documents this conversion needs. Typically:
 |---|---|
 | `MODEL.md` or `DESIGN.md` | The design of record: the thing being built, its concepts, its invariants. |
 | `PLAN.md` | The work broken into phases, before it is broken into Matters. |
-| `intake.md` | The intake sheet from `assets/playbook/intake.md`. |
+| `intake.md` | The intake sheet from `playbook/intake.md`. |
 | `HANDOFF.md` | The bridge from planning to execution. Its §1 constraints are binding on every later session. |
 | `SEED-CARDS.md` | Per-Matter reading lists, so a session reads exactly what it needs. |
 | `workplans/<slug>.md` | One per Matter: intent, Brief if earned, Steps with done-criteria, edges, seal. Present only when there is no tracker — see "Where the workplans live". |
@@ -97,8 +97,9 @@ purpose — never copy or commit them into this repo.
 
 Seed each working session with the smallest correct set:
 
-1. toolsmith's CONTRACT.md;
-2. the playbook page for the current stage;
+1. toolsmith's CONTRACT.md (`toolsmith doc CONTRACT.md`);
+2. the playbook page for the current stage, read with `toolsmith doc
+   playbook/<page>.md`;
 3. `HANDOFF.md` §1 and §2 (constraints and locked decisions);
 4. the seed card for the Matter at hand;
 5. that Matter's workplan, from whichever medium §1 names.

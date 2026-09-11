@@ -1,6 +1,7 @@
 <!--
 Workplan template (toolsmith handoff-kit). Copy to your sidecar as
-workplans/<slug>.md, one per Matter. Delete this comment and the
+workplans/<slug>.md (`toolsmith doc handoff-kit/workplan-template.md >
+workplans/<slug>.md`), one per Matter. Delete this comment and the
 > GUIDANCE blocks once the workplan is real.
 
 Use this file when the conversion has no tracker (T22). When a tracker

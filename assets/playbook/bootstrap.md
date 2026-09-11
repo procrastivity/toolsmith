@@ -6,7 +6,7 @@ a verb surface you design, and the same hygiene every tool gets.
 
 If something *does* exist — a skill directory, scripts, a prompt with
 install steps — you are migrating, not bootstrapping. Start at
-`assets/playbook/intake.md`.
+`playbook/intake.md`.
 
 ---
 
@@ -56,7 +56,7 @@ never in advance (C2.5). The exit-code table stays closed (C2.4).
 
 ## 4. Ship the first release
 
-Follow `assets/playbook/release-and-hygiene.md`. The short version: tag
+Follow `playbook/release-and-hygiene.md`. The short version: tag
 `v0.1.0`, push the tag, and let the workflow do everything else. Do this
 before the tool feels finished — a release process first exercised at
 v1.0 is a release process debugged in public.

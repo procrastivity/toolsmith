@@ -21,7 +21,8 @@ Sidecar to `HANDOFF.md`. One card per Matter.
 - **Notes** = anything about sequencing, fan-out, or traps.
 
 All cards assume HANDOFF §1 (operating constraints) and §2 (locked
-decisions) as ambient context, plus toolsmith's CONTRACT.md.
+decisions) as ambient context, plus toolsmith's CONTRACT.md
+(`toolsmith doc CONTRACT.md`).
 
 ---
 

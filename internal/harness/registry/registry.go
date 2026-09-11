@@ -32,7 +32,7 @@ type Harness struct {
 
 // All lists every harness this tool can project itself into. The skeleton
 // ships exactly one worked target (claude-code, T18); add a row here per
-// additional harness — toolsmith's assets/playbook/new-harness-target.md
+// additional harness — toolsmith doc playbook/new-harness-target.md
 // walks every call site a new target touches.
 var All = []Harness{
 	{

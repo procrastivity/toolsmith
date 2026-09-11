@@ -1,7 +1,8 @@
 <!--
 HANDOFF template (toolsmith handoff-kit). Copy to your sidecar as
-HANDOFF.md and fill it in. Delete this comment and every > GUIDANCE
-block before the document is used.
+HANDOFF.md (`toolsmith doc handoff-kit/HANDOFF-template.md > HANDOFF.md`)
+and fill it in. Delete this comment and every > GUIDANCE block before the
+document is used.
 
 What this document is: the bridge between a design session and the
 sessions that write workplans and code. It ratifies *shapes* — which

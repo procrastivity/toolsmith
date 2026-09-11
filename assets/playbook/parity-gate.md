@@ -198,7 +198,7 @@ a probe fails loudly the moment it stops holding. Mutation testing
 during code review surfaces candidates for all four kinds; so does
 reading the oracle's error paths. Whichever kind a divergence is, record
 it in `docs/<matter>/parity-divergences.md` with a repro, a rationale,
-and which of the four kinds it is — see `assets/playbook/port-spec.md`'s
+and which of the four kinds it is — see `playbook/port-spec.md`'s
 "Its companion: the divergence list".
 
 ## 10. Retire it at cutover

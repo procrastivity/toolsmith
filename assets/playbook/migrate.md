@@ -1,6 +1,6 @@
 # Migrate — an existing tool becomes a Go binary
 
-Entry condition: `assets/playbook/intake.md` produced an intake sheet. You know
+Entry condition: `playbook/intake.md` produced an intake sheet. You know
 the shape, the planned verb surface, which parts are oracles, and which
 questions the owner still owes you.
 
@@ -25,8 +25,8 @@ Two calls, both from intake, both written down:
 
 ## Stage 1 — settle packaging before writing verbs
 
-Read CONTRACT.md end to end and record the tool-specific answers it
-leaves open:
+Read CONTRACT.md end to end (`toolsmith doc CONTRACT.md`) and record the
+tool-specific answers it leaves open:
 
 - module path and binary name;
 - the error package name (`<tool>err`) and env prefix (`<TOOL>_`);
@@ -37,7 +37,7 @@ leaves open:
 - state, if there is any that is neither config nor asset.
 
 These answers belong in the conversion's sidecar, not in your head — see
-`assets/handoff-kit/`. A conversion that skips the sidecar re-derives its own
+`handoff-kit/`. A conversion that skips the sidecar re-derives its own
 decisions three sessions later.
 
 ## Stage 2 — cut the branch, leave the old line running
@@ -109,11 +109,11 @@ it is the correct place to be.
 
 For every part intake marked **oracle**:
 
-1. Write the port spec first (`assets/playbook/port-spec.md`). It lives at
+1. Write the port spec first (`playbook/port-spec.md`). It lives at
    `docs/<matter>/port-spec.md`, committed, with numbered sections that
    code comments cite (C7.2).
 2. Stand up the parity gate before the second verb lands
-   (`assets/playbook/parity-gate.md`). A gate written after the port is a test
+   (`playbook/parity-gate.md`). A gate written after the port is a test
    of what you built, not of what you promised.
 3. Port behavior, not structure. The Go package layout follows the
    contract (C1.4), never the old file layout.
@@ -165,7 +165,7 @@ and the skill description. Both are the only hand-authored strings in
 the generated tree (C4.4). Say when to reach for the tool, not what its
 verbs are — the verb table is generated.
 
-Extra harnesses: `assets/playbook/new-harness-target.md`, one sitting each.
+Extra harnesses: `playbook/new-harness-target.md`, one sitting each.
 Splice targets, emit-only targets, and per-target variants (C4.8) get
 byte-golden tests and a one-time backup, without exception.
 

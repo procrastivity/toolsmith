@@ -425,8 +425,8 @@ var internalTextExemptions = []textExemption{
 	},
 	{
 		path:        "harness/registry/registry.go",
-		present:     "toolname's assets/playbook/new-harness-target.md",
-		replacement: "toolsmith's assets/playbook/new-harness-target.md",
+		present:     "toolname doc playbook/new-harness-target.md",
+		replacement: "toolsmith doc playbook/new-harness-target.md",
 		reason:      "names toolsmith the project, whose playbook every new tool must be pointed at; the reverse substitution cannot tell \"toolsmith, this tool\" from \"toolsmith, the project\", same class as the Contract constant",
 	},
 	{

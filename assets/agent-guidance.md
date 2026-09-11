@@ -9,6 +9,8 @@ own manifest — never hand-edit it. If it looks stale or wrong, re-run
 `toolsmith install <harness>` (it refuses to clobber a hand-edited target
 without `--force`) or run `toolsmith doctor` first to see what drifted.
 
-CONTRACT.md and the playbook under `assets/playbook/` in the toolsmith
-repo are the source of truth for how this tool and the tools it produces
-are shaped; nothing generated here overrides them.
+CONTRACT.md and the playbook are the source of truth for how this tool
+and the tools it produces are shaped; nothing generated here overrides
+them. Read them with `toolsmith doc` (for example,
+`toolsmith doc CONTRACT.md`), not from a clone of the toolsmith repo. The
+binary's copy of the contract is the one its `check` audits against.
