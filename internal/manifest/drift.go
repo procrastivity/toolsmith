@@ -7,9 +7,9 @@ import "sort"
 //
 // This per-file added/removed/changed report is the contract's drift
 // FLOOR; the six-state per-target vocabulary (C4.5: current, missing,
-// stale, modified, unowned_conflict, incompatible) is derived from it by
-// the callers that know which side moved — see internal/harness's three
-// comparisons.
+// stale, modified, unowned_conflict, incompatible) is derived from it in
+// exactly one place, harness.Status, which folds this floor and the
+// stamp's schemaVersion into C4.5's vocabulary (T6).
 type Drifted struct {
 	// Path is the generated file's path, relative to the harness's install
 	// directory.
