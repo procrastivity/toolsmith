@@ -11,9 +11,10 @@ not say. It is the reconciliation pass that `assets/playbook/migrate.md`
 Stage 8 and CONTRACT.md's Conformance section ask for.
 
 **Status: reconciliation pass complete, read against CONTRACT.md v1.1 at
-`4e645c6`.** Five clauses diverge. This file closes one of them (C7.1).
-The other four are recorded with a disposition and are not fixed by this
-pass.
+`4e645c6`, and amended at step-29.** Six clauses diverge. This file closes
+one of them (C7.1). The other five are recorded with a disposition and are
+not fixed by this pass. Separately, eight `[check]` markers claim more than
+the checker reads (§3).
 
 ---
 
@@ -36,7 +37,13 @@ both as landed.
 - **Unverifiable by reading:** C6.1, which is a claim about what people do.
 - **Holds, with a note:** C4.7. Doctor's garbage collection is a "may", and
   one harness with a fixed install directory leaves nothing to collect.
-- **Holds:** every other clause.
+- **Holds:** every other clause, except C2.3, which the reading missed.
+  (step-29) The conformance run found it, and §2 now records it.
+
+The reading compared each clause with the built tool. It did not compare
+each `[check]` marker's extent with what the checker reads, although the
+Conformance section asks for that too. (step-29) The conformance run made
+that comparison, and §3 records the result.
 
 Each note below names where its divergence came from, because the origin
 decides who fixes it:
@@ -48,6 +55,24 @@ decides who fixes it:
 - **contract** — the clause claims more than any implementation does.
 
 ## 2. Implementation-forced notes
+
+### C2.3 — `check` and `new` ignore `--json` (port)
+
+**The clause:** `--json` emits the success payload as one JSON value.
+
+**What was built:** `manifest`, `version`, `install`, `uninstall` and
+`doctor` read the flag. `check` and `new` never read it, so
+`toolsmith check --json` prints the same text lines as a plain run
+(`evidence/2026-09-11-toolsmith-conformance.md` §4).
+
+**Why:** the retired oracles had no JSON output, and the port reproduced
+their streams byte for byte through the parity window. The port spec does
+not rule on `--json`.
+
+**Disposition:** backlog `01M26ZTDV24B342XPF699KC3PF`. Each verb needs a
+payload shape, or a recorded ruling that a verb may decline `--json`.
+`check`'s payload is where T24's derived conformance would report the
+audited clause set.
 
 ### C2.5 — error codes outside the prefix set (port, chassis)
 
@@ -160,7 +185,44 @@ findings.
 `docs/<matter>/decisions.md`. The Brief-in-place convention is recorded
 as a wip finding against the kit, for `clast-conversion` to read.
 
-## 3. The contract minor this pass read against
+## 3. `[check]` markers that claim more than the checker reads (step-29)
+
+The Conformance section says a marker states exactly which part of a
+clause the checker covers, and a marker that claims more is the document
+overclaiming. `fe7d4d8` narrowed C1.1's marker for that reason. The
+conformance run set every marker beside `internal/verbs/check/audit.go`
+(`evidence/2026-09-11-toolsmith-conformance.md` §5). Eight still claim
+more:
+
+- **C1.2** claims a main package. The checker reads that `cmd/` has a
+  subdirectory.
+- **C1.6** sits at the head of the clause. The checker reads that
+  `flake.nix` exists, that `.envrc` contains `use flake`, and, when
+  `assets/` exists, that `flake.nix` contains `share/`.
+- **C3.1** sits at the head of the clause. The checker reads that
+  `manifest --json` exits 0 with a non-zero `schemaVersion`.
+- **C3.6** quotes `toolsmith/v1`. The checker reads a `toolsmith/` prefix,
+  as T24 records.
+- **C6.3** sits at the head of the clause. The checker reads that
+  `CHANGELOG.md` is not in the git index.
+- **C6.6** sits at the head of the clause. The checker reads the hook
+  file, `commit-msg` in `.pre-commit-config.yaml`, and
+  `--hook-type commit-msg` in a Makefile with a `hooks:` target.
+- **C6.7** sits at the head of the clause. The checker reads
+  `version: "2"` and `default: none`.
+- **C7.5** sits at the head of the clause. The checker reads that
+  `README.md` exists.
+
+The step-32 gate (`coverage_test.go`) cannot catch this class, because it
+compares clause IDs, not extents. The origin is the contract: the marks
+were placed at clause level before the Conformance rule said where a mark
+sits.
+
+**Disposition:** step-38 narrows each marker to the sub-part the checker
+reads, in C1.2's and C3.4's parenthetical shape. No checker behavior
+changes.
+
+## 4. The contract minor this pass read against
 
 The Conformance section asks for the reading pass to be "recorded with the
 minor version it was read against". For toolsmith, this file is that
@@ -173,15 +235,17 @@ beside T24's derived-conformance entry, `01M2696J6ECKMW3M7158GK5SMA`.
 
 ## Where this stands
 
-toolsmith holds every clause it can be read against except C2.5, C4.2,
-C4.4 and C4.5. Each of the four is on the backlog with the choice it needs.
-None blocks the Matter's seal. The seal asks for three things:
-`toolsmith check .` clean on toolsmith, the oracles and the gate deleted in
-one commit, and the gate's final run in `evidence/`. The last two hold
-already, at `725e94e` and in
-`evidence/2026-09-10-parity-final.md`. Step-29 records the conformance run.
+toolsmith holds every clause it can be read against except C2.3, C2.5,
+C4.2, C4.4 and C4.5. Each of the five is on the backlog with the choice it
+needs. Step-38 narrows the eight overclaiming markers.
 
-All four notes reach the chassis, so every tool `new` has produced
-carries them too. C4.2 needs only code. C2.5's doctor code, C4.4 and C4.5
-each need a ruling first, because each fix is either new code or a
-narrower clause.
+None of this blocks the Matter's seal. The seal asks for three things:
+`toolsmith check .` clean on toolsmith, the oracles and the gate deleted in
+one commit, and the gate's final run in `evidence/`. The last two hold at
+`725e94e` and in `evidence/2026-09-10-parity-final.md`. The first holds at
+`d94f4ee`, in `evidence/2026-09-11-toolsmith-conformance.md`.
+
+C2.3 is port-only. The other four notes reach the chassis, so every tool
+`new` has produced carries them too. C4.2 needs only code. C2.3, C2.5,
+C4.4 and C4.5 each need a ruling first, because each fix is either new
+code or a narrower clause.
