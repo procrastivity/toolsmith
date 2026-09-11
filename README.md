@@ -63,13 +63,19 @@ make build             # bin/toolsmith
 
 bin/toolsmith new clast --dir ~/Code/clast-go
 bin/toolsmith check ~/Code/wip
+bin/toolsmith doc                       # list the contract, playbook and kit
+bin/toolsmith doc playbook/intake.md    # print one
 ```
 
+The binary carries CONTRACT.md, the playbook and the handoff-kit. A
+conversion therefore needs no clone of this repo: `toolsmith doc` lists
+them, and `toolsmith doc <name>` prints one (T28).
+
 A conversion normally runs as an agent-seeded session: create a sidecar
-planning repo from [assets/handoff-kit/](assets/handoff-kit/), seed the session with
-CONTRACT.md + the playbook page for your entry mode + the handoff, and
-let the workplans drive. The skeleton and binary do the mechanical
-part either way.
+planning repo from `toolsmith doc handoff-kit/sidecar-README.md`, seed
+the session with CONTRACT.md + the playbook page for your entry mode +
+the handoff, and let the workplans drive. The skeleton and binary do the
+mechanical part either way.
 
 ## Evolving the conventions
 
