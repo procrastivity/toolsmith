@@ -25,6 +25,7 @@ import (
 	"github.com/procrastivity/toolsmith/internal/asset"
 	"github.com/procrastivity/toolsmith/internal/harness"
 	"github.com/procrastivity/toolsmith/internal/manifest"
+	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 )
 
 // Name is this harness's install-target name, as passed to `toolsmith
@@ -147,17 +148,18 @@ func Generate(m manifest.Manifest) (map[string][]byte, error) {
 // frontmatter. Rejected: joining the lines with spaces, which would install
 // a trigger sentence the override's author never wrote. Only trailing
 // whitespace, such as the newline a text file ends with, is trimmed.
+//
+// A malformed value is validation.skill-description (exit 1, C2.5): the
+// shipped asset is one line, so only a user override can break it.
 func resolveSkillDescription() (string, error) {
 	resolved, err := asset.Resolve(skillDescriptionAsset)
 	if err != nil {
 		return "", fmt.Errorf("claudecode: resolving skill description: %w", err)
 	}
 	desc := strings.TrimRight(string(resolved.Bytes()), "\n\r\t ")
-	if desc == "" {
-		return "", fmt.Errorf("claudecode: skill description asset %q is empty", skillDescriptionAsset)
-	}
-	if strings.ContainsAny(desc, "\n\r") {
-		return "", fmt.Errorf("claudecode: skill description asset %q must be a single line", skillDescriptionAsset)
+	if desc == "" || strings.ContainsAny(desc, "\n\r") {
+		return "", toolsmitherr.New("validation.skill-description",
+			fmt.Sprintf("skill description asset %q must be exactly one non-empty line; fix or remove the override under the toolsmith config directory", skillDescriptionAsset))
 	}
 	return desc, nil
 }

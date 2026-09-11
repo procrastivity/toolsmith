@@ -463,12 +463,43 @@ func TestUninstall_EmptyDirNoStamp_NotFound(t *testing.T) {
 	}
 }
 
+// TestInstall_MalformedDescriptionOverride pins the error for a user
+// override of the skill description that is empty or spans lines: a
+// structured validation code with exit 1, not a plain error that the
+// fallback path reports as usage (C2.4, C2.5).
+func TestInstall_MalformedDescriptionOverride(t *testing.T) {
+	for name, content := range map[string]string{
+		"two lines": "first line\nsecond line\n",
+		"empty":     "\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			xdg := t.TempDir()
+			override := filepath.Join(xdg, "toolsmith", "templates", "skills", "claude-code", "description.txt")
+			if err := os.MkdirAll(filepath.Dir(override), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(override, []byte(content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			env := []string{"TOOLSMITH_CLAUDE_SKILLS_DIR=" + t.TempDir(), "XDG_CONFIG_HOME=" + xdg}
+
+			r := run(t, env, "install", "claude-code", "--json")
+			if r.exitCode != 1 {
+				t.Fatalf("exit=%d, want 1; stderr=%q", r.exitCode, r.stderr)
+			}
+			if code := parseErrorEnvelope(t, r.stderr).Error.Code; code != "validation.skill-description" {
+				t.Fatalf("error code = %q, want validation.skill-description", code)
+			}
+		})
+	}
+}
+
 // TestInstallAll_OneRefused drives the bare `install` (no harness name)
 // path against a refused target. The skeleton's registry lists exactly
 // one harness, so refusing it also refuses the whole run: each per-target
 // result carries its own refusal code in the results JSON on stdout, and
 // the closing summary error on stderr carries the shared
-// refusal.harness-targets-refused code (C4.5 §1.4).
+// refusal.harness-targets-refused code (C4.5, C4.6).
 func TestInstallAll_OneRefused(t *testing.T) {
 	skills := t.TempDir()
 	env := []string{"TOOLSMITH_CLAUDE_SKILLS_DIR=" + skills}
