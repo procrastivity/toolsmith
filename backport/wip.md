@@ -146,6 +146,18 @@ shows the cost of.
 claude-code's `plugin.json` suffix, `"%s's own generated plumbing-verb
 skill."`, conforms under T27 as it is.
 
+**12. A duplicate harness name does not panic (C4.2).**
+`internal/harness/registry/registry.go` builds `Names` with
+`var Names = namesOf(All)`, and `namesOf` has no duplicate check. wip has
+six rows in `All`, so two rows with one `Name` would collapse silently,
+and install, uninstall and doctor would read the table differently. C4.2
+says registration panics on duplicates.
+
+toolsmith's chassis added the guard inside `namesOf`, with a unit test
+(contract-v1-2-reconcile step-01). The variable initializer is static
+program construction, so no `init()` is needed (C1.3). The same few lines
+port to wip unchanged.
+
 ---
 
 ## Not a defect

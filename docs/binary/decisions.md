@@ -102,6 +102,25 @@ ruling, because `internal.*` would move their exit code to 4.
 `doctor.findings-present` needs a sixth prefix by decision, or a mapping
 into the five.
 
+**Resolution, part 1 (contract-v1-2-reconcile step-02, step-03):** every
+`new.*` code is gone.
+
+- The three name checks return `validation.missing-name`,
+  `validation.invalid-name` and `validation.placeholder-name`, with exit 1.
+- `new.no-skeleton` became `internal.skeleton-missing`, with exit 4. The
+  branch fires only when the binary's embedded copy lacks `_skeleton`,
+  because `asset.Tree` skips an override directory that does not exist.
+  So the failure is a build defect, not a user mistake.
+- `new` now checks git before it writes the skeleton. It refuses with
+  `not-found.git` when git is not on `PATH`. Then it creates the target,
+  runs `git init`, and refuses with `not-found.git-identity`, removing the
+  target, when git has no author or committer identity inside the new
+  repository. A commit failure after that returns `internal.git-failed`,
+  with exit 4. This also fixes the half-built tree that
+  `evidence/2026-09-11-toolsmith-conformance.md` §7 recorded.
+
+`doctor.findings-present` stays open until the contract amendment.
+
 ### C4.2 — a duplicate registration does not panic (chassis)
 
 **The clause:** registration panics on duplicates, because registration is
@@ -114,6 +133,11 @@ no duplicate check and no panic. With one row, nothing can collide yet.
 **Why:** no recorded reason in this repo.
 
 **Disposition:** already on the backlog as `01M25VVQQCDCQHJ65P7FSA13TT`.
+
+**Resolution (contract-v1-2-reconcile step-01):** `namesOf`, which already
+runs as the initializer of `registry.Names`, panics on a repeated harness
+name. A unit test proves the panic. The change is in both trees, so every
+tool `new` produces carries the guard.
 
 ### C4.4 — two hand-written strings outside the asset chain (port, chassis)
 
