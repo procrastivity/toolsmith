@@ -211,6 +211,22 @@ ratification:
    namespace; the human `status` can become a small pretty porcelain
    over the agent-grade plumbing one.
 
+## 7. The namespace label, challenged and kept
+
+Challenged 2026-09-14: could the namespace word be shorter —
+`plumb` (reads as a verb) or `pb` (the plumbum joke) — to save
+tokens in generated skill tables, where the word repeats once per
+verb row and per invocation? The token argument dissolved on
+inspection: the ~4-chars-per-token figure is a corpus average, not
+a cutoff, and all three names tokenize to ~1 token in command
+position, so the rename saves nothing measurable. The label stays
+`plumbing` on the merits that remain: it is the exact C3.2 kind
+string (one name per concept across CLI, manifest, and contract)
+and the git term of art; `plumb` misreads as an action where the
+word marks an audience boundary, and `pb` is opaque and collides
+with protobuf. This challenge ratifies nothing — the namespace
+pattern itself still waits on the clast proving ground, below.
+
 ## Where this stands
 
 C3.2 keeps working as the determinism/projectability axis — nothing
