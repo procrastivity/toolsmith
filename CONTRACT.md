@@ -121,7 +121,8 @@ marked **[check]** are mechanically verifiable.
   LLM), `llm` (CLI-side LLM shaping), `control-plane` (needs a live MCP
   surface). The manifest walk hard-errors on a verb with no kind. This
   is the mechanical enforcement point of the porcelain/plumbing split —
-  never inferred from folder names.
+  never inferred from folder names. The kinds carry the determinism
+  axis alone; T29 records what the phrase once also meant, and why.
 - **C3.3** Assets are listed with sha256 checksums so drift and
   tampering are detectable.
 - **C3.4** **[check]** (that the field is present and `sha256:`-prefixed)
