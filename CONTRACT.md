@@ -1,4 +1,4 @@
-# The toolsmith contract — v1.2
+# The toolsmith contract — v1.3
 
 **Status: normative.** This document is the cross-tool contract for
 procrastivity-style CLI tools. A tool that conforms declares
@@ -299,6 +299,38 @@ marked **[check]** are mechanically verifiable.
   design of record lives. (wip shipped without one; the skeleton makes
   absence the anomaly.)
 
+## C8 — Shapes
+
+- **C8.1** Where a tool ships an LLM-shaped workflow, it ships it as a
+  **shape**: one named workflow, defined **once**, delivered in two
+  forms that stay in lockstep by construction. The definition is a
+  **flow asset** — `assets/flows/<shape>.md`: numbered steps, plumbing
+  calls, prompt references, decision points, and a marked set of
+  form-specific presentation details outside the parity promise. The
+  two forms:
+  - the **verb form** — a top-level `llm`-kind verb: the tool
+    implements the flow, citing its steps in comments (C7.4), and
+    talks to the LLM endpoint itself;
+  - the **skill form** — the projected skill, whose core instruction
+    is *read the flow asset and follow it*; the harness agent is the
+    LLM and drives the plumbing directly.
+  The flow rides the asset chain (C5.1) and reaches the skill form
+  live, through an asset-resolving verb at use time — never rendered
+  into the projection at install, so an edit or a user override
+  reaches both forms with no re-install. The flow asset is the one
+  object that links a shape's two forms; without it the halves file
+  under unrelated clauses (`llm` verb here, C4.4 judgment prose
+  there) and drift between them is invisible (T29). Proven by the
+  clast conversion (SURFACE.md V6, owner decision S9); ratified by
+  T30.
+- **C8.2** **The push-down rule.** Every deterministic step a shape
+  needs must be reachable through `plumbing`-kind verbs. A shape's
+  verb form may hold private *state* (a cache) but never private
+  *logic* the skill form cannot reproduce (clast SURFACE.md V7, T30).
+  Old clast's parity audit is the cautionary record: grouping rules,
+  scan windows, and default windows lived in one delivery form each,
+  and every one drifted or went missing in the other.
+
 ---
 
 ## Clause history
@@ -313,6 +345,7 @@ would be invention.
 | v1.0 | C1.1–C7.5 as extracted | The body proven by wip, duo and ste9. |
 | v1.1 | C3.8 (T23) | Each verb records its positional-argument usage. The first additive clause after T20; it is what exposed that the document had nowhere to record a minor (T24). |
 | v1.2 | C2.5's `<verb>.findings-present` form (T26) | A verb whose findings are its verdict has a sanctioned error code, and its findings stay on stdout. wip, duo, ste9 and every tool `new` produced already emit `doctor.findings-present`, so they conform with no change. |
+| v1.3 | C8.1–C8.2 (T30) | Shapes: an LLM workflow is defined once, in a live-served flow asset, with a verb form and a skill form; every deterministic step it needs is reachable through plumbing. Proven by the clast conversion (S9/S10). No existing tool ships a shape, so all conform with no change. |
 
 A tool's declared string does not move with this table (T24) — see
 **Versioning** above.
