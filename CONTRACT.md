@@ -330,6 +330,32 @@ marked **[check]** are mechanically verifiable.
   Old clast's parity audit is the cautionary record: grouping rules,
   scan windows, and default windows lived in one delivery form each,
   and every one drifted or went missing in the other.
+- **C8.3** **The `plumbing` namespace.** The audience axis — porcelain,
+  the public user API a human types, vs plumbing, the substrate that
+  skills and scripts call — is carried by the command tree, never by a
+  kind: one binary, bare `--help` listing only the porcelain set, and
+  the substrate invoked as `<tool> plumbing <verb>` and listed only by
+  `<tool> plumbing --help` (bare `<tool> plumbing` prints that help,
+  exit 0). The axes stay orthogonal in both directions: every
+  `llm`-kind verb is porcelain, and porcelain also holds deterministic
+  verbs (`init`, `doctor`, the install family). The manifest records
+  the qualified name (`"plumbing sessions"`) with the verb's own usage
+  (C3.8). The label is exactly `plumbing`: the C3.2 kind string and
+  the git term of art; shorter labels were challenged and rejected on
+  the merits (lineage doc §7). A tool that ships shapes (C8.1) draws
+  this boundary; adopting it in an existing flat surface is that
+  tool's own decision, in its own register. Proven by the clast
+  conversion (SURFACE.md V1–V3, owner decision S8); ratified by T31.
+- **C8.4** **Shape names reuse across the boundary.** Every shape has
+  a same-named plumbing document verb: `<tool> <shape>` is the shape
+  (C8.1's verb form), and `<tool> plumbing <shape>` is its
+  deterministic core — the document its flow starts from, readable
+  markdown with `--json` as the structure, and step 1 of every flow
+  asset. Inside the namespace, shape names are reserved for these
+  documents and nothing else. The reuse dissolves invented sibling
+  names (draft-1 clast's `retro-data`): the collision only ever
+  existed because a flat surface made the good name collide with
+  itself (SURFACE.md V2/V8, T31).
 
 ---
 
@@ -345,7 +371,7 @@ would be invention.
 | v1.0 | C1.1–C7.5 as extracted | The body proven by wip, duo and ste9. |
 | v1.1 | C3.8 (T23) | Each verb records its positional-argument usage. The first additive clause after T20; it is what exposed that the document had nowhere to record a minor (T24). |
 | v1.2 | C2.5's `<verb>.findings-present` form (T26) | A verb whose findings are its verdict has a sanctioned error code, and its findings stay on stdout. wip, duo, ste9 and every tool `new` produced already emit `doctor.findings-present`, so they conform with no change. |
-| v1.3 | C8.1–C8.2 (T30) | Shapes: an LLM workflow is defined once, in a live-served flow asset, with a verb form and a skill form; every deterministic step it needs is reachable through plumbing. Proven by the clast conversion (S9/S10). No existing tool ships a shape, so all conform with no change. |
+| v1.3 | C8.1–C8.4 (T30, T31) | Shapes and the audience surface: an LLM workflow is defined once, in a live-served flow asset, with a verb form and a skill form; every deterministic step it needs is reachable through plumbing; the `plumbing` namespace is the audience boundary, with shape names reused across it. Proven by the clast conversion (S8–S10). No existing tool ships a shape, and the namespace binds only tools that do, so all conform with no change. |
 
 A tool's declared string does not move with this table (T24) — see
 **Versioning** above.
