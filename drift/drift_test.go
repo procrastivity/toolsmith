@@ -458,6 +458,7 @@ var rootPathExemptions = []pathExemption{
 	{prefix: "backport/", reason: "punch lists for existing tools; toolsmith's own register"},
 	{prefix: "docs/binary/", reason: "the toolsmith-binary Matter's port spec and divergences (C7.2); a tool writes its own"},
 	{prefix: "docs/contract-v1-2-reconcile/", reason: "the contract-v1-2-reconcile Matter's decisions (C7.1); a tool writes its own"},
+	{prefix: "docs/lineage/", reason: "lineage records behind toolsmith's own T-decisions (C7.1's neighborhood); a tool writes its own"},
 	{prefix: "evidence/", reason: "toolsmith's own verification records (C7.3); the skeleton ships no evidence"},
 	{prefix: "drift/", reason: "this gate; it compares toolsmith against the skeleton and has no meaning inside a generated tool"},
 	{prefix: "flake.lock", reason: "per-repo nix lock; the skeleton ships none so each tool resolves nixpkgs when it is created instead of inheriting toolsmith's pin"},
