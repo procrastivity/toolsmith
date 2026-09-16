@@ -237,3 +237,23 @@ give C3.2 its retroactive decision record, ratify a shape clause and
 the namespace pattern (minor-version bump per T20/T24), and decide
 whether wip adopts the namespace. Until then, this document is the
 record of why.
+
+*Amendment (2026-09-16):* every item above is now discharged. C3.2
+got its retroactive record (T29); shapes and the push-down rule are
+C8.1–C8.2 (T30); the `plumbing` namespace and shape-name reuse are
+C8.3–C8.4 (T31); wip adopted the namespace as its own register's
+decision (D112). One mechanism postdates this document: clast
+SURFACE.md's V1 amendment (2026-09-14, owner call) let a verb
+register in both trees when both audiences need it — an alias pair
+for the same deliverable, a split pair for different ones — and
+deferred the manifest question it raises (`alias-of`, "a C3
+conversation with the contract"). wip proved the mechanism
+end-to-end under its plumbing-namespace Matter (D112): `wip next`
+byte-equals `wip plumbing next` (alias pair); `wip status` splits on
+the human face while `--json` stays byte-identical (split pair);
+all six harness projections regenerated teaching the plumbing
+spellings. The contract ratified it as C8.5, with `alias-of` settled
+as C3.9 (T32): the porcelain member carries `alias-of` naming the
+canonical member's qualified name, the canonical member carries
+nothing, and a split pair carries no link — a different deliverable
+is not an alias. The open question is closed.
