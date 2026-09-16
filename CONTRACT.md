@@ -1,4 +1,4 @@
-# The toolsmith contract — v1.3
+# The toolsmith contract — v1.4
 
 **Status: normative.** This document is the cross-tool contract for
 procrastivity-style CLI tools. A tool that conforms declares
@@ -145,6 +145,17 @@ marked **[check]** are mechanically verifiable.
   never parsed into structure (T23). A consumer that reads only the
   manifest, the harness projection included, must be able to see that a
   verb takes an argument at all.
+- **C3.9** When a verb registers in both trees as an alias pair (C8.5),
+  the manifest records the link on the porcelain member only:
+  `alias-of: "<canonical qualified name>"` — `"plumbing next"` on the
+  `next` entry. The field is absent on every other verb, the canonical
+  member included, and on both members of a split pair: a different
+  deliverable is not an alias. Each member registers as a full leaf —
+  flags, usage, and schema emitted and checked independently — so the
+  porcelain spelling is a real manifest row, never a hidden cobra
+  alias. Projection keys on the plumbing tree (C4.3), so only the
+  canonical member reaches a skill table. Adopted from wip (D112);
+  ratified by T32.
 
 ## C4 — The install model
 
@@ -162,8 +173,12 @@ marked **[check]** are mechanically verifiable.
 - **C4.3** Per-harness packages are policy-free: they render and write.
   Refusal policy (hand-edit protection, force semantics) lives in the
   verbs. Projected artifacts are **written, never symlinked**. Only
-  `plumbing` verbs project into a harness; the generator applies the
-  filter (`harness.Projectable`), the manifest itself never filters.
+  `plumbing` verbs project into a harness — where the C8.3 boundary
+  stands, the projectable set is exactly the namespace's
+  `plumbing`-kind members: the audience axis and the determinism axis
+  conjoined, so a pair reaches a skill table through its canonical
+  member alone (T32). The generator applies the filter
+  (`harness.Projectable`), the manifest itself never filters.
 - **C4.4** Each installed tree carries one stamp file
   (`.<tool>-manifest-stamp.json`): `{toolVersion, schemaVersion,
   files: {path: sha256}}`. Everything generated is stamped; the only
@@ -356,6 +371,29 @@ marked **[check]** are mechanically verifiable.
   names (draft-1 clast's `retro-data`): the collision only ever
   existed because a flat surface made the good name collide with
   itself (SURFACE.md V2/V8, T31).
+- **C8.5** **Verb pairs.** Where the C8.3 boundary stands, a verb may
+  register in both trees when both audiences need it. Three questions
+  decide placement: does a human type it unprompted; does a skill or
+  script call it for its own operation; and, when both are yes, is the
+  deliverable the same for both audiences.
+  - **Alias pair** (same deliverable): one implementation, one
+    constructor registered twice — identical flags, output, schema,
+    and kind. A golden test pins sameness: byte-identical stdout,
+    stderr, and exit code under both spellings, with help text
+    differing only in the command path itself and failure
+    diagnostics canonicalizing to the plumbing spelling.
+  - **Split pair** (different deliverable): the top-level member is
+    the finished, human-sized form; the plumbing member is the
+    deterministic substrate it is built on and keeps the full audit
+    contract. The pair splits on the human face only — `--json`
+    remains one contract, byte-identical across the pair.
+  One concept per shared name. Both spellings execute — the boundary
+  stays help-listing and projection, never execution; a pair is not
+  a gate. A pair's plumbing member keeps it projectable, and
+  top-level-only members stay unprojected on purpose. Proven by wip
+  (D112): `wip next` and `wip plumbing next` are byte-equal (alias
+  pair); `wip status` and `wip plumbing status` differ by design
+  while `--json` is byte-identical (split pair). Ratified by T32.
 
 ---
 
@@ -372,6 +410,7 @@ would be invention.
 | v1.1 | C3.8 (T23) | Each verb records its positional-argument usage. The first additive clause after T20; it is what exposed that the document had nowhere to record a minor (T24). |
 | v1.2 | C2.5's `<verb>.findings-present` form (T26) | A verb whose findings are its verdict has a sanctioned error code, and its findings stay on stdout. wip, duo, ste9 and every tool `new` produced already emit `doctor.findings-present`, so they conform with no change. |
 | v1.3 | C8.1–C8.4 (T30, T31) | Shapes and the audience surface: an LLM workflow is defined once, in a live-served flow asset, with a verb form and a skill form; every deterministic step it needs is reachable through plumbing; the `plumbing` namespace is the audience boundary, with shape names reused across it. Proven by the clast conversion (S8–S10). No existing tool ships a shape, and the namespace binds only tools that do, so all conform with no change. |
+| v1.4 | C8.5, C3.9 (T32) | Verb pairs and the `alias-of` manifest field: where the `plumbing` namespace stands, a verb may register in both trees — an alias pair for the same deliverable, a split pair for different ones — and the manifest links an alias pair's porcelain member to its canonical qualified name. C4.3's projectable set is clarified, not changed: the namespace's `plumbing`-kind members. Proven by wip (D112); the clause is permissive, so every tool conforms with no change — wip as shipped, clast's own pairs decided-not-built (SURFACE.md V24 amendment), duo and ste9 shipping no namespace. |
 
 A tool's declared string does not move with this table (T24) — see
 **Versioning** above.
