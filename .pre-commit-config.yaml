@@ -11,8 +11,16 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # testdata/ trees are pinned bytes by design — golden files and the
+      # corpus they are compared against, where a file that ends mid-line
+      # or carries deliberate trailing whitespace is the fixture, not a
+      # defect. These two fixers rewrite exactly those bytes, so a hook run
+      # would break a golden silently. Confirm with `pre-commit run
+      # --all-files` after touching a fixture: it must report no changes.
       - id: trailing-whitespace
+        exclude: '/testdata/'
       - id: end-of-file-fixer
+        exclude: '/testdata/'
       - id: check-yaml
       - id: check-merge-conflict
 
