@@ -25,9 +25,11 @@
           pname = "toolsmith";
           inherit version;
           src = ./.;
-          # The first `nix build` fails and prints the real hash — paste it
-          # here. Re-do this whenever go.mod changes.
-          vendorHash = "sha256-komX1AmHt2NoF1x6xsNa2RFkfVzOXfYEMPhT0zwMxjw=";
+          # Dependencies are vendored (vendor/ is committed), so there is
+          # no fixed-output fetch and no hash to re-pin when go.mod
+          # changes — run `go mod vendor` after a dependency change and
+          # commit the result instead.
+          vendorHash = null;
 
           env.CGO_ENABLED = 0;
 
