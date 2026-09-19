@@ -463,6 +463,7 @@ var rootPathExemptions = []pathExemption{
 	{prefix: "drift/", reason: "this gate; it compares toolsmith against the skeleton and has no meaning inside a generated tool"},
 	{prefix: "flake.lock", reason: "per-repo nix lock; the skeleton ships none so each tool resolves nixpkgs when it is created instead of inheriting toolsmith's pin"},
 	{prefix: "toolname.mk", reason: "toolsmith.mk (substituted key): the make target only toolsmith needs (smoke), split out so Makefile stays a pure substitution"},
+	{prefix: "vendor/", reason: "go mod vendor output for toolsmith's own dependency set; the skeleton ships no go.sum of its own to vendor, so a generated tool runs go mod vendor for itself once it has real dependencies"},
 }
 
 var rootExcludedPairs = []excludedPair{
@@ -476,7 +477,6 @@ var rootTextExemptions = []textExemption{
 	{path: "Makefile", present: "\ninclude toolname.mk\n", replacement: "", reason: "pulls in toolsmith.mk, the toolsmith-only targets; the one line that lets the rest of the Makefile stay shared"},
 	{path: ".gitignore", present: "# wip's per-clone render tree. Ignored by decision, not by\n# .git/info/exclude (C6.8): wip's doctor refuses to render into a\n# tracked .wip/, and the Matters themselves live in wip, not here.\n/.wip/\n\n", replacement: "", reason: "toolsmith uses wip (H8); not every tool does, and C6.8 asks each tool to decide its own posture"},
 	{path: ".gitignore", present: "# Instantiation smoke-test output\n/tmp/\n\n", replacement: "", reason: "names the directory toolsmith's smoke target writes; a generated tool has no smoke target"},
-	{path: "flake.nix", present: "          # The first `nix build` fails and prints the real hash — paste it\n          # here. Re-do this whenever go.mod changes.\n          vendorHash = \"sha256-komX1AmHt2NoF1x6xsNa2RFkfVzOXfYEMPhT0zwMxjw=\";\n", replacement: "          # TODO(toolname): the first `nix build` fails and prints the real\n          # hash — paste it here. Re-do this whenever go.mod changes.\n          vendorHash = pkgs.lib.fakeHash;\n", reason: "placeholder (new-tool checklist step 3); when go.mod changes, update this hash in the same commit as flake.nix"},
 	{path: "flake.nix", present: "            description = \"toolname — the conventions repo for procrastivity-style tooling: it instantiates the chassis, audits a tool against the contract, and carries the migration playbook\";\n", replacement: "            description = \"toolname — TODO: one line on what this tool is\";\n", reason: "placeholder: the new-tool checklist names flake meta.description as a marker to fill"},
 }
 
