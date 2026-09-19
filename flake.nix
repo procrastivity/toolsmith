@@ -80,5 +80,11 @@
             echo "toolsmith dev shell — run 'make check' to lint+test, 'make hooks' to install pre-commit." >&2
           '';
         };
-      });
+      }) // {
+      # Downstream flakes consume `pkgs.toolsmith` through this overlay;
+      # keep it or their inputs break.
+      overlays.default = final: prev: {
+        toolsmith = self.packages.${prev.system}.default;
+      };
+    };
 }
