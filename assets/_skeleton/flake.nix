@@ -25,9 +25,11 @@
           pname = "toolname";
           inherit version;
           src = ./.;
-          # TODO(toolname): the first `nix build` fails and prints the real
-          # hash — paste it here. Re-do this whenever go.mod changes.
-          vendorHash = pkgs.lib.fakeHash;
+          # Dependencies are vendored (vendor/ is committed), so there is
+          # no fixed-output fetch and no hash to re-pin when go.mod
+          # changes — run `go mod vendor` after a dependency change and
+          # commit the result instead.
+          vendorHash = null;
 
           env.CGO_ENABLED = 0;
 

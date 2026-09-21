@@ -159,8 +159,8 @@ Checklist — the judgment steps the rename cannot do:
      skill description.
   2. cd %s && CGO_ENABLED=0 go build ./... && go test ./...
      (should already pass; it did in the skeleton).
-  3. nix build — it fails once and prints the real vendorHash; paste it
-     into flake.nix.
+  3. go mod vendor — commit vendor/ whenever a dependency changes;
+     flake.nix ships vendorHash = null, so there is no hash to paste.
   4. make hooks — installs both pre-commit stages.
   5. Decide the verb surface; register verbs in internal/cli/root.go,
      one package each, every constructor ending in surface.Annotate.
