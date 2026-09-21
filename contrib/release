@@ -114,7 +114,7 @@ git tag -a --cleanup=whitespace -F dist/RELEASE_NOTES.md "$TAG"
 # pipeline for any unpushed commits, and the tag push starts the release
 # pipeline on a commit the remote already has.
 #
-# We use --no-follow-tags to ensure the only tagged pushed is the tag we we just
+# We use --no-follow-tags to ensure the only tag pushed is the tag we just
 # created.
 echo "Pushing ${BRANCH}, then ${TAG}..."
 git push --no-follow-tags origin "$BRANCH"
