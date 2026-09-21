@@ -114,14 +114,11 @@ git tag -a --cleanup=whitespace -F dist/RELEASE_NOTES.md "$TAG"
 # pipeline for any unpushed commits, and the tag push starts the release
 # pipeline on a commit the remote already has.
 #
-# --no-follow-tags is load-bearing: with push.followTags=true in the
-# environment, a plain branch push also sends every reachable annotated
-# tag — including a local-only baseline tag (v0.0.0 in the first-release
-# flow) that must stay local. This driver pushes only the tag it just
-# created, on the next line, explicitly.
+# We use --no-follow-tags to ensure the only tagged pushed is the tag we we just
+# created.
 echo "Pushing ${BRANCH}, then ${TAG}..."
 git push --no-follow-tags origin "$BRANCH"
-git push origin "$TAG"
+git push --no-follow-tags origin "$TAG"
 
 WEB_URL=$(git remote get-url origin)
 WEB_URL="${WEB_URL%.git}"
