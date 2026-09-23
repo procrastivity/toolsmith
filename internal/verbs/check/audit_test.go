@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -222,7 +223,7 @@ func TestCheckManifestDoc(t *testing.T) {
 	}{
 		{
 			name: "conformant, compact JSON",
-			doc:  `{"schemaVersion":1,"contract":"toolsmith/v1","manifest_digest":"sha256:abc"}`,
+			doc:  `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":5,"manifest_digest":"sha256:abc"}`,
 			want: nil,
 		},
 		{
@@ -235,23 +236,24 @@ func TestCheckManifestDoc(t *testing.T) {
 			doc: `{
   "schemaVersion": 1,
   "contract": "toolsmith/v1",
+  "contractReconciledMinor": 5,
   "manifest_digest": "sha256:abc"
 }`,
 			want: nil,
 		},
 		{
 			name: "missing schemaVersion (zero value)",
-			doc:  `{"contract":"toolsmith/v1","manifest_digest":"sha256:abc"}`,
+			doc:  `{"contract":"toolsmith/v1","contractReconciledMinor":5,"manifest_digest":"sha256:abc"}`,
 			want: []Finding{{"C3.1", "manifest --json carries no schemaVersion"}},
 		},
 		{
 			name: "digest missing the sha256: prefix",
-			doc:  `{"schemaVersion":1,"contract":"toolsmith/v1","manifest_digest":"abc"}`,
+			doc:  `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":5,"manifest_digest":"abc"}`,
 			want: []Finding{{"C3.4", "manifest --json carries no manifest_digest"}},
 		},
 		{
 			name: "contract missing the toolsmith/ prefix",
-			doc:  `{"schemaVersion":1,"contract":"other/v1","manifest_digest":"sha256:abc"}`,
+			doc:  `{"schemaVersion":1,"contract":"other/v1","contractReconciledMinor":5,"manifest_digest":"sha256:abc"}`,
 			want: []Finding{{"C3.6", "manifest --json declares no toolsmith contract version"}},
 		},
 		{
@@ -261,6 +263,7 @@ func TestCheckManifestDoc(t *testing.T) {
 				{"C3.1", "manifest --json carries no schemaVersion"},
 				{"C3.4", "manifest --json carries no manifest_digest"},
 				{"C3.6", "manifest --json declares no toolsmith contract version"},
+				{"C3.10", "manifest --json carries an invalid contractReconciledMinor"},
 			},
 		},
 	}
@@ -269,6 +272,44 @@ func TestCheckManifestDoc(t *testing.T) {
 			got := checkManifestDoc([]byte(tt.doc))
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("checkManifestDoc(%q) = %v, want %v", tt.doc, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCheckManifestDoc_ReconciliationMinor(t *testing.T) {
+	base := func(minor string) string {
+		return `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":` + minor + `,"manifest_digest":"sha256:abc"}`
+	}
+	tests := []struct {
+		name string
+		doc  string
+		want string
+	}{
+		{"current is clean", base("5"), ""},
+		{"stale names every later history row", base("2"), "v1.3 (C8.1–C8.4 (T30, T31)); v1.4 (C8.5, C3.9 (T32)); v1.5 (C3.10 (T25))"},
+		{"missing is deterministic", `{"schemaVersion":1,"contract":"toolsmith/v1","manifest_digest":"sha256:abc"}`, "carries no contractReconciledMinor"},
+		{"zero is invalid", base("0"), "carries an invalid contractReconciledMinor"},
+		{"malformed is invalid", base(`"two"`), "carries an invalid contractReconciledMinor"},
+		{"future is invalid", base("6"), "records future contractReconciledMinor 6"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := checkManifestDoc([]byte(tt.doc))
+			var got string
+			for _, finding := range findings {
+				if finding.Clause == "C3.10" {
+					got = finding.Message
+				}
+			}
+			if tt.want == "" {
+				if got != "" {
+					t.Fatalf("C3.10 finding = %q, want none", got)
+				}
+				return
+			}
+			if !strings.Contains(got, tt.want) {
+				t.Fatalf("C3.10 finding = %q, want substring %q", got, tt.want)
 			}
 		})
 	}

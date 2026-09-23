@@ -157,6 +157,14 @@ marked **[check]** are mechanically verifiable.
   canonical member reaches a skill table. Adopted from wip (D112);
   ratified by T32.
 
+- **C3.10** **[check]** The manifest records the contract minor its
+  latest human reconciliation actually read as the positive integer
+  `contractReconciledMinor`. The checker derives the current minor and
+  clause additions from this document's history and reports missing,
+  invalid, future, or stale readings; stale readings name every later
+  version and its added clauses. This records process currency, not
+  semantic conformance (T25).
+
 ## C4 — The install model
 
 - **C4.1** Distribution is two-step: install the binary system-wide
@@ -411,6 +419,7 @@ would be invention.
 | v1.2 | C2.5's `<verb>.findings-present` form (T26) | A verb whose findings are its verdict has a sanctioned error code, and its findings stay on stdout. wip, duo, ste9 and every tool `new` produced already emit `doctor.findings-present`, so they conform with no change. |
 | v1.3 | C8.1–C8.4 (T30, T31) | Shapes and the audience surface: an LLM workflow is defined once, in a live-served flow asset, with a verb form and a skill form; every deterministic step it needs is reachable through plumbing; the `plumbing` namespace is the audience boundary, with shape names reused across it. Proven by the clast conversion (S8–S10). No existing tool ships a shape, and the namespace binds only tools that do, so all conform with no change. |
 | v1.4 | C8.5, C3.9 (T32) | Verb pairs and the `alias-of` manifest field: where the `plumbing` namespace stands, a verb may register in both trees — an alias pair for the same deliverable, a split pair for different ones — and the manifest links an alias pair's porcelain member to its canonical qualified name. C4.3's projectable set is clarified, not changed: the namespace's `plumbing`-kind members. Proven by wip (D112); the clause is permissive, so every tool conforms with no change — wip as shipped, clast's own pairs decided-not-built (SURFACE.md V24 amendment), duo and ste9 shipping no namespace. |
+| v1.5 | C3.10 (T25) | The manifest records the minor its latest human reconciliation read, and the checker reports missing, invalid, future, or stale readings with every intervening version and its added clauses. This is process currency, not semantic conformance. |
 
 A tool's declared string does not move with this table (T24) — see
 **Versioning** above.

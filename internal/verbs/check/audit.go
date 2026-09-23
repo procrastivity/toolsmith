@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
+	toolsmith "github.com/procrastivity/toolsmith"
 	toolmanifest "github.com/procrastivity/toolsmith/internal/manifest"
 )
 
@@ -314,7 +316,71 @@ func checkManifestDoc(raw []byte) []Finding {
 	if parseErr != nil || !strings.HasPrefix(m.Contract, "toolsmith/") {
 		findings = append(findings, Finding{"C3.6", "manifest --json declares no toolsmith contract version"})
 	}
+
+	findings = append(findings, checkReconciliationMinor(raw, parseErr, m)...)
 	return findings
+}
+
+type contractHistoryEntry struct {
+	Minor   int
+	Clauses string
+}
+
+var contractHistoryPattern = regexp.MustCompile(`(?m)^\|\s*v1\.(\d+)\s*\|\s*([^|]+)\|`)
+
+func contractHistory() ([]contractHistoryEntry, error) {
+	matches := contractHistoryPattern.FindAllSubmatch(toolsmith.Contract(), -1)
+	entries := make([]contractHistoryEntry, 0, len(matches))
+	for _, match := range matches {
+		minor, err := strconv.Atoi(string(match[1]))
+		if err != nil {
+			return nil, fmt.Errorf("invalid contract history minor %q", match[1])
+		}
+		entries = append(entries, contractHistoryEntry{Minor: minor, Clauses: strings.TrimSpace(string(match[2]))})
+	}
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("contract history is empty")
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Minor < entries[j].Minor })
+	return entries, nil
+}
+
+func checkReconciliationMinor(raw []byte, parseErr error, m toolmanifest.Manifest) []Finding {
+	const invalid = "manifest --json carries an invalid contractReconciledMinor"
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return []Finding{Finding{Clause: "C3.10", Message: invalid}}
+	}
+	_, ok := fields["contractReconciledMinor"]
+	if !ok {
+		return []Finding{Finding{Clause: "C3.10", Message: "manifest --json carries no contractReconciledMinor"}}
+	}
+	if parseErr != nil {
+		return []Finding{Finding{Clause: "C3.10", Message: invalid}}
+	}
+	if m.ContractReconciledMinor <= 0 {
+		return []Finding{Finding{Clause: "C3.10", Message: invalid}}
+	}
+
+	history, err := contractHistory()
+	if err != nil {
+		return []Finding{Finding{Clause: "C3.10", Message: "cannot derive the current contract minor: " + err.Error()}}
+	}
+	current := history[len(history)-1].Minor
+	if m.ContractReconciledMinor > current {
+		return []Finding{Finding{Clause: "C3.10", Message: fmt.Sprintf("manifest --json records future contractReconciledMinor %d; current minor is %d", m.ContractReconciledMinor, current)}}
+	}
+	if m.ContractReconciledMinor == current {
+		return nil
+	}
+
+	var later []string
+	for _, entry := range history {
+		if entry.Minor > m.ContractReconciledMinor {
+			later = append(later, fmt.Sprintf("v1.%d (%s)", entry.Minor, entry.Clauses))
+		}
+	}
+	return []Finding{Finding{Clause: "C3.10", Message: fmt.Sprintf("manifest --json reconciliation is stale at v1.%d; current minor is v1.%d; later additions: %s", m.ContractReconciledMinor, current, strings.Join(later, "; "))}}
 }
 
 // cliffTagPattern is the oracle's C6.2 tag pattern
