@@ -16,8 +16,9 @@ import (
 	"github.com/procrastivity/toolsmith/internal/harness/registry"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
 	"github.com/procrastivity/toolsmith/internal/surface"
-	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 )
+
+import "github.com/procrastivity/toolsmith/internal/toolsmitherr"
 
 // Command constructs the `toolsmith uninstall <harness>` verb.
 func Command(streams *iostreams.Streams) *cobra.Command {

@@ -6,7 +6,7 @@
 .PHONY: smoke
 
 # The skeleton must stay a working Go module: instantiate it into a scratch
-# directory with the `new` verb, then build, vet, and test the result. A
+# directory with the `new` verb, then lint, build, vet, and test the result. A
 # green smoke run means the next tool bootstraps green too.
 #
 # The skeleton instantiated here must be the one this working tree embeds,
@@ -20,6 +20,6 @@ smoke: build
 	rm -rf tmp/smoke tmp/smoke-xdg-config
 	mkdir -p tmp/smoke-xdg-config
 	XDG_CONFIG_HOME=$(CURDIR)/tmp/smoke-xdg-config bin/toolsmith new smoke --dir tmp/smoke --no-git
-	cd tmp/smoke && CGO_ENABLED=0 go build ./... && go vet ./... && go test ./...
+	cd tmp/smoke && make lint && CGO_ENABLED=0 go build ./... && go vet ./... && go test ./...
 
 check: smoke
