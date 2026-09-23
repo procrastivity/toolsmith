@@ -433,7 +433,7 @@ func checkCases(t *testing.T) []checkCase {
 // manifestJSONLiteral is a compact, contract-conformant manifest document:
 // schemaVersion, contract, and manifest_digest all present with the exact
 // prefixes the field checks require (port spec §9.1).
-const manifestJSONLiteral = `{"schemaVersion":1,"contract":"toolsmith/v1","manifest_digest":"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd"}`
+const manifestJSONLiteral = `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":5,"manifest_digest":"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd"}`
 
 // prettyManifestJSON carries the same fields as manifestJSONLiteral,
 // MarshalIndent-spaced — port spec §9.1's condition, a pretty-printed
@@ -441,6 +441,7 @@ const manifestJSONLiteral = `{"schemaVersion":1,"contract":"toolsmith/v1","manif
 const prettyManifestJSON = `{
   "schemaVersion": 1,
   "contract": "toolsmith/v1",
+  "contractReconciledMinor": 5,
   "manifest_digest": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd"
 }`
 

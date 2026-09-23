@@ -31,6 +31,7 @@ func AuditedClauses() []string {
 		"C3.1",
 		"C3.4",
 		"C3.6",
+		"C3.10",
 		"C6.2",
 		"C6.3",
 		"C6.5",

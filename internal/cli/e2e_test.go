@@ -126,10 +126,11 @@ func TestManifest_JSON_DeclaresContractAndDigest(t *testing.T) {
 		t.Fatalf("exit code = %d, want 0; stderr=%q", r.exitCode, r.stderr)
 	}
 	var m struct {
-		SchemaVersion  int    `json:"schemaVersion"`
-		Contract       string `json:"contract"`
-		ManifestDigest string `json:"manifest_digest"`
-		Verbs          []struct {
+		SchemaVersion           int    `json:"schemaVersion"`
+		Contract                string `json:"contract"`
+		ContractReconciledMinor int    `json:"contractReconciledMinor"`
+		ManifestDigest          string `json:"manifest_digest"`
+		Verbs                   []struct {
 			Name string `json:"name"`
 			Kind string `json:"kind"`
 		} `json:"verbs"`
@@ -139,6 +140,9 @@ func TestManifest_JSON_DeclaresContractAndDigest(t *testing.T) {
 	}
 	if m.Contract == "" {
 		t.Fatalf("manifest declares no contract version (C3.6)")
+	}
+	if m.ContractReconciledMinor != 2 {
+		t.Fatalf("contractReconciledMinor = %d, want 2 (T25)", m.ContractReconciledMinor)
 	}
 	if !strings.HasPrefix(m.ManifestDigest, "sha256:") {
 		t.Fatalf("manifest_digest = %q, want a sha256: prefix (C3.4)", m.ManifestDigest)

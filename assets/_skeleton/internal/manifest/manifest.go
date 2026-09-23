@@ -86,11 +86,12 @@ type Asset struct {
 
 // Manifest is the flat object `toolname manifest --json` emits.
 type Manifest struct {
-	Tool          Tool    `json:"tool"`
-	SchemaVersion int     `json:"schemaVersion"`
-	Contract      string  `json:"contract"`
-	Verbs         []Verb  `json:"verbs"`
-	Assets        []Asset `json:"assets"`
+	Tool                    Tool    `json:"tool"`
+	SchemaVersion           int     `json:"schemaVersion"`
+	Contract                string  `json:"contract"`
+	ContractReconciledMinor int     `json:"contractReconciledMinor"`
+	Verbs                   []Verb  `json:"verbs"`
+	Assets                  []Asset `json:"assets"`
 
 	// ManifestDigest is a sha256 over this document's own canonical JSON
 	// with this field held empty (C3.4, adopted from duo): a comparable
@@ -127,10 +128,11 @@ func Build(root *cobra.Command, build buildinfo.Info, opts ...Option) (Manifest,
 			Commit:  build.Commit,
 			Date:    build.Date,
 		},
-		SchemaVersion: SchemaVersion,
-		Contract:      Contract,
-		Verbs:         verbs,
-		Assets:        assets,
+		SchemaVersion:           SchemaVersion,
+		Contract:                Contract,
+		ContractReconciledMinor: 2,
+		Verbs:                   verbs,
+		Assets:                  assets,
 	}
 	for _, opt := range opts {
 		opt(&m)
