@@ -175,14 +175,109 @@ The criterion is **"the new one is the one I reach for,"** never a
 parity checklist and never a feature count. Parity gates tell you the
 port is faithful; they do not tell you the tool is better.
 
-When it is time:
+When it is time, identify `<old-default>` (the current default-branch
+name) and `<new-line>` (the temporary branch holding the new implementation).
+Freeze branch writes for the cutover and capture the commit OIDs of both
+tips before changing refs. Record the provider's current default branch
+and remote HEAD, and inventory the remote refs so the cutover has a
+known before-state. Refuse to proceed if `<old-default>-final` already
+exists; decide its disposition explicitly rather than overwriting it.
 
-1. flip the default branch, rename the old branch to `<name>-final`;
-2. uninstall the old line's harness integration by its own uninstaller,
+Before renaming anything, audit metadata and consumers tied to branch
+names: branch protections and rulesets, required checks, open PR bases
+and heads, draft releases, Pages source, CI and release branch filters,
+raw-file links, and GitHub Actions consumers that check out a named
+branch. Record which settings the host carries across a rename and
+which must be recreated or updated. Do not assume that redirects preserve
+every consumer. In particular, GitHub documents that a renamed PR head
+branch closes its open PR, while raw URLs, pulls by the old name, and
+Action consumers do not follow the rename; resolve or knowingly
+disposition affected PRs and consumers before cutover. See [GitHub's
+branch rename guidance](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/renaming-a-branch).
+
+Preserve the old tip before moving the new line into the stable name.
+The exact ref operations depend on whether `<new-line>` has already been
+pushed:
+
+- **`<new-line>` is already pushed.** Use the hosting provider's
+  branch-rename operation to rename the old default branch
+  `<old-default>` to `<old-default>-final`; then rename the pushed
+  `<new-line>` branch to `<old-default>`. A provider-side rename of an
+  already-pushed branch is important: it allows the provider to apply
+  its branch-rename behavior, which a local `git branch -m` cannot do.
+- **`<new-line>` is unpushed.** Preserve the old remote branch as
+  `<old-default>-final` first using the provider's rename (or an
+  equivalent deliberate ref operation that preserves the captured old
+  OID); then rename the local `<new-line>` branch to `<old-default>` and
+  push it to `origin/<old-default>`. Do not push it under a temporary
+  remote name merely to rename it afterward.
+
+After either path, explicitly set the repository's default branch back
+to `<old-default>`. Do not leave the repository default at
+`<new-line>` or `<old-default>-final`, and do not treat changing the
+provider default as a substitute for moving the branch tips. Verify the
+new-line OID is now at `origin/<old-default>` and the captured old OID
+is at `origin/<old-default>-final` before cleaning up the temporary
+remote ref. A provider-side rename may already have removed that ref;
+otherwise delete only the temporary ref after both OID checks pass.
+Verify it is absent afterward. Never discard or force-overwrite either
+captured tip.
+
+Repair the working clone explicitly; a branch rename does not repair
+its tracking configuration. Fetch and prune, rename/create the two
+local branches as `<old-default>` and `<old-default>-final`, set each
+branch's upstream to its matching remote branch, and refresh
+`origin/HEAD` to `origin/<old-default>`. Check the resulting branch
+configuration rather than assuming it followed the rename. The clast
+cutover is the precedent: it ended with `main` on the Go line,
+`bash-final` on the retired line, and `origin/HEAD -> origin/main`, but
+the local `bash-final` still tracked `origin/main` until its upstream
+was repaired. A successful rename alone can therefore leave a
+misleading, stale upstream.
+
+Existing clones need deliberate recovery. Fetch the renamed refs and
+inspect the local and remote OIDs first; because the new default line
+has unrelated orphan history, do not pull, merge, or rebase it into the
+old line. Preserve any local-only work on a separately named branch or
+backup ref. Then move the old local default branch to
+`<old-default>-final` (or recreate it from `origin/<old-default>-final`),
+replace/recreate the local `<old-default>` from `origin/<old-default>`,
+set both upstreams explicitly, and update `origin/HEAD`. If local
+history cannot be safely reconciled, make a fresh clone after preserving
+local-only commits; never resolve this situation with `--allow-unrelated-histories`.
+
+Re-audit and disposition the host metadata and consumers after the
+swap. Ensure protections/rulesets and required checks protect the new
+`<old-default>` branch, not just the old implementation now at
+`<old-default>-final`. Confirm PR bases/heads and draft releases remain
+valid or have been recreated, Pages still publishes from the intended
+source, CI/release branch filters target the preserved name, and raw
+links and branch-based Action consumers have been updated or knowingly
+accepted. Consumers that depend on the old default-branch name should
+continue to find the new implementation under that same name.
+
+Verify the finished cutover using recorded OIDs, not branch names
+alone:
+
+- `origin/<old-default>` resolves to the captured new-line OID and
+  `origin/<old-default>-final` resolves to the captured old-line OID;
+- the provider reports `<old-default>` as the default, and the remote
+  HEAD is `origin/<old-default>`;
+- a fresh clone checks out `<old-default>` at the new-line OID;
+- in the repaired working clone, both local branches have matching
+  same-named upstreams, and `origin/HEAD` points at
+  `origin/<old-default>`;
+- the old tip remains reachable at `<old-default>-final`, the
+  temporary `<new-line>` remote ref is absent, and the consumer audit
+  confirms continuity for the preserved default name.
+
+Then:
+
+1. uninstall the old line's harness integration by its own uninstaller,
    then `<tool> install <harness>` for each target;
-3. delete the oracle and the parity gate in the same commit, and say in
+2. delete the oracle and the parity gate in the same commit, and say in
    the message that the gate passed at the point of deletion;
-4. remove the old install machinery (install.sh, marketplace entry,
+3. remove the old install machinery (install.sh, marketplace entry,
    plugin.json) — it is replaced, not ported (intake step 1).
 
 ## Stage 8 — reconcile and register
