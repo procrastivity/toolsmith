@@ -17,8 +17,9 @@ import (
 	"github.com/procrastivity/toolname/internal/cliflags"
 	"github.com/procrastivity/toolname/internal/iostreams"
 	"github.com/procrastivity/toolname/internal/surface"
-	"github.com/procrastivity/toolname/internal/toolnameerr"
 )
+
+import "github.com/procrastivity/toolname/internal/toolnameerr"
 
 // Command constructs the `toolname doctor` verb. root is the
 // *cobra.Command NewRootCommand is assembling, captured by reference — the

@@ -16,8 +16,9 @@ import (
 	"github.com/procrastivity/toolname/internal/harness/registry"
 	"github.com/procrastivity/toolname/internal/iostreams"
 	"github.com/procrastivity/toolname/internal/surface"
-	"github.com/procrastivity/toolname/internal/toolnameerr"
 )
+
+import "github.com/procrastivity/toolname/internal/toolnameerr"
 
 // Command constructs the `toolname uninstall <harness>` verb.
 func Command(streams *iostreams.Streams) *cobra.Command {

@@ -17,8 +17,9 @@ import (
 	"github.com/procrastivity/toolsmith/internal/cliflags"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
 	"github.com/procrastivity/toolsmith/internal/surface"
-	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 )
+
+import "github.com/procrastivity/toolsmith/internal/toolsmitherr"
 
 // Command constructs the `toolsmith doctor` verb. root is the
 // *cobra.Command NewRootCommand is assembling, captured by reference — the
