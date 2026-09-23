@@ -56,29 +56,25 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 		Short: "audit a tool repo against the mechanical ([check]) clauses of CONTRACT.md",
 		Long: "audit a tool repo against the mechanical ([check]-marked) clauses of CONTRACT.md.\n\n" +
 			"path defaults to the current directory. Findings are printed flat, one \"<clause>: <message>\" line each, exhaustively — every failing clause, never just the first.",
-		Args: cobra.MaximumNArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if err := cobra.MaximumNArgs(1)(cmd, args); err != nil {
+				return err
+			}
+			path := "."
+			if len(args) == 1 {
+				path = args[0]
+			}
+			info, err := os.Stat(path)
+			if err != nil || !info.IsDir() {
+				return fmt.Errorf("%q is not a directory", path)
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags := cliflags.FromContext(cmd.Context())
 			path := "."
 			if len(args) == 1 {
 				path = args[0]
-			}
-
-			info, err := os.Stat(path)
-			if err != nil || !info.IsDir() {
-				// The oracle folds "wrong argument count" and "the one
-				// argument you gave isn't a directory" into one combined
-				// usage guard (port spec §5.1, §8.1); Cobra's Args
-				// already rejects the wrong-count case above this RunE,
-				// so what lands here is only the non-directory case.
-				// Returning a plain (non-toolsmitherr,
-				// non-exitcode.Silent) error routes through Execute's
-				// Cobra-argument-parsing fallback, which exits 2,
-				// matching the oracle's usage exit code (port spec §1,
-				// judgment call 2). TestCheck_NotADirectory and
-				// TestGoldenCheckCLI pin the exit code; nothing pins the
-				// message text.
-				return fmt.Errorf("%q is not a directory", path)
 			}
 
 			// The oracle resolves the argument to an absolute path with
