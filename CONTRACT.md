@@ -1,4 +1,4 @@
-# The toolsmith contract — v1.4
+# The toolsmith contract — v1.5
 
 **Status: normative.** This document is the cross-tool contract for
 procrastivity-style CLI tools. A tool that conforms declares
