@@ -102,6 +102,40 @@ func TestUsageError_BadFlag(t *testing.T) {
 	}
 }
 
+func TestUsageError_UnknownCommand(t *testing.T) {
+	r := run(t, nil, "no-such-command")
+	if r.exitCode != 2 || r.stdout != "" || !strings.HasPrefix(r.stderr, "toolsmith: ") {
+		t.Fatalf("unknown command: exit=%d stdout=%q stderr=%q; want usage 2, empty stdout, text diagnostic", r.exitCode, r.stdout, r.stderr)
+	}
+}
+
+func TestInstall_RunEFailureIsInternalAndArgsFailureRemainsUsage(t *testing.T) {
+	// install's own Args validator and RunE share the same Cobra command:
+	// excess args must remain usage, while a real filesystem failure from
+	// the verb must be rendered as internal in both output modes.
+	if r := run(t, nil, "install", "claude-code", "extra"); r.exitCode != 2 || r.stdout != "" {
+		t.Fatalf("install Args failure: exit=%d stdout=%q stderr=%q; want usage 2 and empty stdout", r.exitCode, r.stdout, r.stderr)
+	}
+
+	skillsFile := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(skillsFile, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	env := []string{"TOOLSMITH_CLAUDE_SKILLS_DIR=" + skillsFile}
+	text := run(t, env, "install", "claude-code", "--force")
+	if text.exitCode != 4 || text.stdout != "" || !strings.HasPrefix(text.stderr, "toolsmith: install: claudecode: creating ") || !strings.Contains(text.stderr, "not a directory") {
+		t.Fatalf("text RunE failure: exit=%d stdout=%q stderr=%q; want internal 4 with one verb-prefixed diagnostic", text.exitCode, text.stdout, text.stderr)
+	}
+	jsonResult := run(t, env, "install", "claude-code", "--force", "--json")
+	if jsonResult.exitCode != text.exitCode || jsonResult.stdout != "" {
+		t.Fatalf("JSON RunE failure: exit=%d stdout=%q stderr=%q; want exit parity and empty stdout", jsonResult.exitCode, jsonResult.stdout, jsonResult.stderr)
+	}
+	envelope := parseErrorEnvelope(t, jsonResult.stderr)
+	if envelope.Error.Code != "internal.command-failed" || !strings.Contains(envelope.Error.Message, "not a directory") {
+		t.Fatalf("JSON error = %+v; want internal.command-failed with the filesystem failure", envelope.Error)
+	}
+}
+
 func TestVersion_JSON(t *testing.T) {
 	r := run(t, nil, "version", "--json")
 	if r.exitCode != 0 {

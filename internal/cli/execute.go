@@ -19,6 +19,7 @@ import (
 // code, nothing rendered) — distinct return paths, not one blanket
 // non-zero exit.
 func Execute(root *cobra.Command, streams *iostreams.Streams) int {
+	classifyRunEFailures(root)
 	cmd, err := root.ExecuteC()
 	if err == nil {
 		return exitcode.Success
@@ -36,11 +37,37 @@ func Execute(root *cobra.Command, streams *iostreams.Streams) int {
 		return exitcode.FromError(terr)
 	}
 
-	// Anything that isn't our own structured error type reached here via
-	// Cobra's own argument-parsing path (bad flags, unknown command,
-	// missing required arg) — a usage error, not a verb failure.
+	// Anything that isn't our own structured error type reached here outside
+	// a RunE callback (bad flags, unknown command, Args validation, hooks) —
+	// a usage error, not a verb failure.
 	_, _ = fmt.Fprintf(streams.Err, "toolsmith: %s\n", err)
 	return exitcode.Usage
+}
+
+// classifyRunEFailures preserves verb-owned structured and silent errors,
+// while giving plain RunE failures the internal code and shared renderer.
+// Cobra invokes Args and flag validation before RunE, so those failures
+// remain on Execute's usage path.
+func classifyRunEFailures(root *cobra.Command) {
+	for _, cmd := range root.Commands() {
+		classifyRunEFailures(cmd)
+	}
+	if root.RunE == nil {
+		return
+	}
+	runE := root.RunE
+	root.RunE = func(cmd *cobra.Command, args []string) error {
+		err := runE(cmd, args)
+		if err == nil {
+			return nil
+		}
+		var structured *toolsmitherr.Error
+		var silent *exitcode.SilentError
+		if errors.As(err, &structured) || errors.As(err, &silent) {
+			return err
+		}
+		return toolsmitherr.New("internal.command-failed", err.Error())
+	}
 }
 
 // verbPath names the failing verb for the human-mode

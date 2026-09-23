@@ -40,11 +40,9 @@ func run(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
 			code = exitcode.FromError(terr)
 			toolsmitherr.Render(&err, "check", terr, false)
 		} else {
-			// Cobra's own Args-validation errors (too many positional
-			// args) and the plain "not a directory" error both reach
-			// here; internal/cli.Execute maps both to exit 2 for the
-			// real binary. Mirror that mapping directly since this test
-			// drives the command in-process, not through Execute.
+			// Cobra's Args-validation errors (too many positional args
+			// and non-directory paths) reach here; mirror the chassis's
+			// usage mapping for this standalone command test.
 			code = exitcode.Usage
 		}
 	}
