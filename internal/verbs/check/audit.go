@@ -349,26 +349,26 @@ func checkReconciliationMinor(raw []byte, parseErr error, m toolmanifest.Manifes
 	const invalid = "manifest --json carries an invalid contractReconciledMinor"
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &fields); err != nil {
-		return []Finding{Finding{Clause: "C3.10", Message: invalid}}
+		return []Finding{reconciliationFinding(invalid)}
 	}
 	_, ok := fields["contractReconciledMinor"]
 	if !ok {
-		return []Finding{Finding{Clause: "C3.10", Message: "manifest --json carries no contractReconciledMinor"}}
+		return []Finding{reconciliationFinding("manifest --json carries no contractReconciledMinor")}
 	}
 	if parseErr != nil {
-		return []Finding{Finding{Clause: "C3.10", Message: invalid}}
+		return []Finding{reconciliationFinding(invalid)}
 	}
 	if m.ContractReconciledMinor <= 0 {
-		return []Finding{Finding{Clause: "C3.10", Message: invalid}}
+		return []Finding{reconciliationFinding(invalid)}
 	}
 
 	history, err := contractHistory()
 	if err != nil {
-		return []Finding{Finding{Clause: "C3.10", Message: "cannot derive the current contract minor: " + err.Error()}}
+		return []Finding{reconciliationFinding("cannot derive the current contract minor: " + err.Error())}
 	}
 	current := history[len(history)-1].Minor
 	if m.ContractReconciledMinor > current {
-		return []Finding{Finding{Clause: "C3.10", Message: fmt.Sprintf("manifest --json records future contractReconciledMinor %d; current minor is %d", m.ContractReconciledMinor, current)}}
+		return []Finding{reconciliationFinding(fmt.Sprintf("manifest --json records future contractReconciledMinor %d; current minor is %d", m.ContractReconciledMinor, current))}
 	}
 	if m.ContractReconciledMinor == current {
 		return nil
@@ -380,7 +380,11 @@ func checkReconciliationMinor(raw []byte, parseErr error, m toolmanifest.Manifes
 			later = append(later, fmt.Sprintf("v1.%d (%s)", entry.Minor, entry.Clauses))
 		}
 	}
-	return []Finding{Finding{Clause: "C3.10", Message: fmt.Sprintf("manifest --json reconciliation is stale at v1.%d; current minor is v1.%d; later additions: %s", m.ContractReconciledMinor, current, strings.Join(later, "; "))}}
+	return []Finding{reconciliationFinding(fmt.Sprintf("manifest --json reconciliation is stale at v1.%d; current minor is v1.%d; later additions: %s", m.ContractReconciledMinor, current, strings.Join(later, "; ")))}
+}
+
+func reconciliationFinding(message string) Finding {
+	return Finding{Clause: "C3.10", Message: message}
 }
 
 // cliffTagPattern is the oracle's C6.2 tag pattern
