@@ -97,9 +97,12 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // repoRoot resolves the toolsmith repo root from this file's own path
@@ -506,6 +509,51 @@ func TestRootChassisMatchesSkeleton(t *testing.T) {
 		excluded:  rootExcludedPairs,
 		texts:     rootTextExemptions,
 	})
+}
+
+// TestPreCommitHookStages pins the stage policy in both copies independently
+// of the byte-parity gate. The project default keeps ordinary hooks on
+// pre-commit, while the conventional-message hook opts into commit-msg
+// explicitly.
+func TestPreCommitHookStages(t *testing.T) {
+	root := repoRoot(t)
+	for _, configPath := range []string{
+		filepath.Join(root, ".pre-commit-config.yaml"),
+		filepath.Join(root, "assets", "_skeleton", ".pre-commit-config.yaml"),
+	} {
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			t.Fatalf("read %s: %v", configPath, err)
+		}
+
+		var config struct {
+			DefaultStages []string `yaml:"default_stages"`
+			Repos         []struct {
+				Hooks []struct {
+					ID     string   `yaml:"id"`
+					Stages []string `yaml:"stages"`
+				} `yaml:"hooks"`
+			} `yaml:"repos"`
+		}
+		if err := yaml.Unmarshal(data, &config); err != nil {
+			t.Fatalf("parse %s: %v", configPath, err)
+		}
+		if want := []string{"pre-commit"}; !slices.Equal(config.DefaultStages, want) {
+			t.Errorf("%s default_stages = %#v, want %#v", configPath, config.DefaultStages, want)
+		}
+
+		var messageStages []string
+		for _, repo := range config.Repos {
+			for _, hook := range repo.Hooks {
+				if hook.ID == "conventional-commit-msg" {
+					messageStages = hook.Stages
+				}
+			}
+		}
+		if want := []string{"commit-msg"}; !slices.Equal(messageStages, want) {
+			t.Errorf("%s conventional-commit-msg stages = %#v, want %#v", configPath, messageStages, want)
+		}
+	}
 }
 
 // gateSpec is one drift comparison: two trees, sharing one comparison
