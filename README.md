@@ -62,10 +62,19 @@ make hooks             # pre-commit, both stages
 make build             # bin/toolsmith
 
 bin/toolsmith new clast --dir ~/Code/clast-go
+cd ~/Code/clast && toolsmith new             # mostly-bare existing project, in place
 bin/toolsmith check ~/Code/wip
 bin/toolsmith doc                       # list the contract, playbook and kit
 bin/toolsmith doc playbook/intake.md    # print one
 ```
+
+With no name, `new` uses the current directory's basename as the tool
+name (lowercase letters and digits, starting with a letter). It leaves
+existing `README.md`, `.gitignore`, and `LICENSE` untouched and refuses
+other skeleton path collisions before writing. It does not initialize Git,
+stage, or commit in this mode; review the generated files and reconcile
+the retained files yourself. For an existing implementation rather than
+a mostly-bare project, use `toolsmith doc playbook/migrate.md`.
 
 The binary carries CONTRACT.md, the playbook and the handoff-kit. A
 conversion therefore needs no clone of this repo: `toolsmith doc` lists

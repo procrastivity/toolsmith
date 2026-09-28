@@ -1,5 +1,6 @@
-// Package new implements the `toolsmith new <name>` verb: a Go port of
-// contrib/new-tool.sh, retired at cutover (Stage 7 of toolsmith-binary).
+// Package new implements the `toolsmith new [name]` verb. With a name it
+// retains the fresh-target behavior ported from contrib/new-tool.sh,
+// retired at cutover (Stage 7 of toolsmith-binary).
 // docs/binary/port-spec.md records the script's behavior — cite it, not
 // the shell, for anything that isn't obvious from the code. It
 // instantiates the shipped chassis skeleton as a new tool: create the
@@ -12,6 +13,9 @@
 // step 8), because only a check inside the new repository predicts whether
 // its commit will succeed (initGitRepo). Parity retired at cutover
 // (725e94e), so the order is free to change.
+//
+// With no name it writes into a mostly-bare current directory without
+// changing Git state or replacing existing planning files.
 //
 // The verb's real output is the produced directory tree, not stdout — its
 // only stdout is the trailing checklist (port spec §5.2, §9.2).
@@ -32,12 +36,12 @@ import (
 	"github.com/procrastivity/toolsmith/internal/surface"
 )
 
-// Command constructs the `toolsmith new <name>` verb. streams is the writer
+// Command constructs the `toolsmith new [name]` verb. streams is the writer
 // pair threaded in at construction (C2.1).
 //
 // Exit codes follow CONTRACT.md C2.4, not the oracle's flat 1 (port spec §1
 // judgment call 3, §9.3): Cobra's own path exits 2 for a bad flag, a
-// missing value, a missing name and a second positional argument; the
+// missing value, --dir without a name and a second positional argument; the
 // existing-target guard exits 3 as a refusal; validation.* and
 // not-found.* failures (a bad name, the placeholder name, git missing or
 // unidentified) exit 1; internal.* failures (internal.instantiate,
@@ -55,13 +59,27 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "new <name>",
+		Use:   "new [name]",
 		Short: "instantiate the chassis skeleton as a new tool",
 		Long: "instantiate the chassis skeleton as a new tool.\n\n" +
-			"<name> becomes the binary name, the Go package names, the environment-variable prefix, and the paths: lowercase letters and digits, starting with a letter.",
-		Args: cobra.ExactArgs(1),
+			"<name> becomes the binary name, the Go package names, the environment-variable prefix, and the paths: lowercase letters and digits, starting with a letter. With no name, instantiate in the current mostly-bare directory, using its basename as the name. Existing README.md, .gitignore and LICENSE are preserved; other skeleton path conflicts are refused. In-place mode does not change Git history or the index.",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if err := cobra.RangeArgs(0, 1)(cmd, args); err != nil {
+				return err
+			}
+			if len(args) == 0 && cmd.Flags().Changed("dir") {
+				return fmt.Errorf("--dir requires <name>; run toolsmith new from the target directory instead")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			p, err := validate(args[0], targetDir, module, noGit)
+			var p params
+			var err error
+			if len(args) == 0 {
+				p, err = validateInPlace(module)
+			} else {
+				p, err = validate(args[0], targetDir, module, noGit)
+			}
 			if err != nil {
 				return err
 			}
@@ -85,6 +103,12 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 
 			if p.doGit {
 				if err := gitStep(initGitRepo); err != nil {
+					return err
+				}
+			}
+
+			if p.inPlace {
+				if err := preflightInPlace(p, skeleton); err != nil {
 					return err
 				}
 			}
@@ -126,7 +150,7 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 	// validate() instead of being spelled here, and the help text says
 	// what it actually is. Recorded as D5 in
 	// docs/binary/parity-divergences.md.
-	cmd.Flags().StringVar(&targetDir, "dir", "", "where to create the tool (default: ./<name>)")
+	cmd.Flags().StringVar(&targetDir, "dir", "", "where to create the tool (default: ./<name>; omit <name> to use the current directory)")
 	cmd.Flags().StringVar(&module, "module", "", "Go module path (default: github.com/procrastivity/<name>)")
 	cmd.Flags().BoolVar(&noGit, "no-git", false, "skip git init and the first commit")
 
@@ -137,7 +161,7 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 // jsonResult is new's --json success payload (C2.3): the instantiated
 // tool's name, its target directory exactly as the caller wrote it, its
 // module path, and whether a git repository was created and committed
-// (false with --no-git).
+// (false with --no-git or in-place mode).
 type jsonResult struct {
 	Name   string `json:"name"`
 	Dir    string `json:"dir"`
@@ -151,7 +175,7 @@ type jsonResult struct {
 // and every other byte is literal, the blank line after the first line
 // included.
 func checklist(p params) string {
-	return fmt.Sprintf(`instantiated %s at %s (module %s)
+	result := fmt.Sprintf(`instantiated %s at %s (module %s)
 
 Checklist — the judgment steps the rename cannot do:
   1. grep -rn 'TODO(%s)' — fill every marker: root Short, README,
@@ -169,4 +193,9 @@ Checklist — the judgment steps the rename cannot do:
   7. Run toolsmith check %s and clear any findings.
   8. Add the tool to toolsmith's TOOLS.md.
 `, p.name, p.targetDir, p.module, p.name, p.targetDir, p.targetDir)
+	if p.inPlace {
+		result += "  9. Existing README.md, .gitignore and LICENSE were left untouched where present;\n" +
+			"     reconcile them with the chassis. Review and commit the new files yourself.\n"
+	}
+	return result
 }

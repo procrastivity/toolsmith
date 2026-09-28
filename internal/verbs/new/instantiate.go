@@ -63,6 +63,68 @@ type params struct {
 	module    string
 	upperName string
 	doGit     bool
+	inPlace   bool
+}
+
+// validateInPlace derives the tool name from the current directory. A
+// directory with a Go module is already a tool, not a mostly-bare project.
+// No git commands run in this mode: existing history and staged work belong
+// to the caller, and initialising a new repo would commit their planning files.
+func validateInPlace(module string) (params, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return params{}, internalErr("finding current directory: %v", err)
+	}
+	name := filepath.Base(cwd)
+	if !namePattern.MatchString(name) || name == namePlaceholder {
+		return params{}, toolsmitherr.New("validation.invalid-name",
+			fmt.Sprintf("directory name %q must be lowercase letters and digits, starting with a letter (or use new <name> --dir <unused-path>)", name))
+	}
+	if _, err := os.Lstat("go.mod"); err == nil {
+		return params{}, toolsmitherr.New("refusal.target-exists", "go.mod already exists; this is not a bare project")
+	} else if !os.IsNotExist(err) {
+		return params{}, internalErr("checking go.mod: %v", err)
+	}
+	if module == "" {
+		module = "github.com/procrastivity/" + name
+	}
+	return params{name: name, targetDir: ".", module: module, upperName: strings.ToUpper(name), inPlace: true}, nil
+}
+
+// Only these non-code files are safe to retain instead of the skeleton's
+// versions. All other collisions fail before any file is written.
+func preserveInPlace(rel string) bool {
+	switch rel {
+	case "README.md", ".gitignore", "LICENSE":
+		return true
+	}
+	return false
+}
+
+func preflightInPlace(p params, skeleton fs.FS) error {
+	return fs.WalkDir(skeleton, ".", func(rel string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+		dest := filepath.Join(p.targetDir, filepath.FromSlash(destPath(rel, p.name)))
+		info, err := os.Lstat(dest)
+		if os.IsNotExist(err) {
+			return nil
+		}
+		if err != nil {
+			return internalErr("checking %q: %v", dest, err)
+		}
+		if d.IsDir() && info.IsDir() {
+			return nil
+		}
+		if !d.IsDir() && preserveInPlace(rel) && info.Mode().IsRegular() {
+			return nil
+		}
+		return toolsmitherr.New("refusal.target-exists", fmt.Sprintf("%s already exists; refusing to overwrite a skeleton path", dest))
+	})
 }
 
 // validate reproduces contrib/new-tool.sh's validation order exactly (port
@@ -146,7 +208,29 @@ func instantiate(p params, skeleton fs.FS, embedded bool) error {
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(dest, substitute(data, p), mode); err != nil {
+		if p.inPlace {
+			if preserveInPlace(rel) {
+				if info, err := os.Lstat(dest); err == nil {
+					if info.Mode().IsRegular() {
+						return nil
+					}
+					return toolsmitherr.New("refusal.target-exists", fmt.Sprintf("%s already exists; refusing to overwrite a skeleton path", dest))
+				} else if !os.IsNotExist(err) {
+					return internalErr("checking %q: %v", dest, err)
+				}
+			}
+			file, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+			if err != nil {
+				return internalErr("creating %q: %v", dest, err)
+			}
+			if _, err := file.Write(substitute(data, p)); err != nil {
+				_ = file.Close()
+				return internalErr("writing %q: %v", dest, err)
+			}
+			if err := file.Close(); err != nil {
+				return internalErr("closing %q: %v", dest, err)
+			}
+		} else if err := os.WriteFile(dest, substitute(data, p), mode); err != nil {
 			return internalErr("writing %q: %v", dest, err)
 		}
 		return nil

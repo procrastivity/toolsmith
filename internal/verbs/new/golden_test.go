@@ -517,8 +517,8 @@ func TestGoldenNew(t *testing.T) {
 }
 
 // TestGoldenNewCLI covers the failure shapes newCases's tree matrix cannot
-// reach: bad flags, a bad name shape, the placeholder name, a missing
-// name, and an existing target, each pinned against the exit code table
+// reach: bad flags, a bad name shape, the placeholder name, and an existing
+// target, each pinned against the exit code table
 // CONTRACT C2.4 defines (port spec §9.3).
 func TestGoldenNewCLI(t *testing.T) {
 	cases := []struct {
@@ -527,9 +527,9 @@ func TestGoldenNewCLI(t *testing.T) {
 		want int
 	}{
 		{"unknown flag", []string{"--bogus", "acme"}, 2},
+		{"dir without name", []string{"--dir", "unused"}, 2},
 		{"bad name shape", []string{"Acme"}, 1},
 		{"the placeholder name", []string{"toolname"}, 1},
-		{"no name", nil, 2},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

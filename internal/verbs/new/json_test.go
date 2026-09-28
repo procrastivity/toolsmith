@@ -57,6 +57,29 @@ func TestNewJSON_NoGit(t *testing.T) {
 	}
 }
 
+func TestNewJSON_InPlace(t *testing.T) {
+	parent := t.TempDir()
+	target := filepath.Join(parent, "demo")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	env := hermeticEnv(t, nil)
+	stdout, stderr, exit := runBin(t, target, env, "new", "--json")
+	if exit != 0 || stderr != "" {
+		t.Fatalf("exit=%d stderr=%q", exit, stderr)
+	}
+	want := `{"name":"demo","dir":".","module":"github.com/procrastivity/demo","git":false}` + "\n"
+	if stdout != want {
+		t.Errorf("stdout=%q, want %q", stdout, want)
+	}
+	if _, err := os.Stat(filepath.Join(target, "go.mod")); err != nil {
+		t.Errorf("in-place go.mod missing: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(target, ".git")); !os.IsNotExist(err) {
+		t.Errorf("in-place mode initialized git: %v", err)
+	}
+}
+
 // TestNewJSON_WithGit asserts "git":true on success and that a real
 // commit exists, using hermeticEnv's explicit identity (GIT_CONFIG_GLOBAL,
 // GIT_CONFIG_NOSYSTEM, and all four GIT_AUTHOR_*/GIT_COMMITTER_* vars) —

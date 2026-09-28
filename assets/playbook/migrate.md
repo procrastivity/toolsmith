@@ -77,10 +77,12 @@ their presence does not block the new line landing beside them.
 toolsmith new <tool> --dir <path-to-worktree>
 ```
 
-The `new` verb **refuses a target directory that already exists** (exit
-3) — it is built to create a fresh worktree, not to write into one that
-is already there. That is the common case for a conversion: the tool
-being ported already has a repo. Point `--dir` at a directory that does
+With an explicit name and `--dir`, `new` **refuses a target directory that
+already exists** (exit 3). Zero-argument `toolsmith new` can bootstrap a
+mostly-bare current directory in place, but it refuses a pre-existing
+`go.mod` or conflicting skeleton code and tooling paths. Those conflicts
+are common in a conversion: the tool being ported already has a repo.
+Point `--dir` at a directory that does
 not exist yet (a scratch path outside the target repo) and add
 `--no-git`, which skips the verb's own `git init` and first commit — you
 do not want a second, disconnected history competing with the repo you

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -159,7 +160,7 @@ func TestExitCodes(t *testing.T) {
 	}{
 		{"unknown flag", []string{"--bogus", "acme"}, exitcode.Usage},
 		{"missing flag value", []string{"acme", "--dir"}, exitcode.Usage},
-		{"no name", nil, exitcode.Usage},
+		{"no name with dir", []string{"--dir", "taken"}, exitcode.Usage},
 		{"two positionals", []string{"a", "b"}, exitcode.Usage},
 		{"bad name shape", []string{"Acme"}, exitcode.UserFail},
 		{"the placeholder name", []string{"toolname"}, exitcode.UserFail},
@@ -173,6 +174,104 @@ func TestExitCodes(t *testing.T) {
 		if stdout != "" {
 			t.Errorf("%s: wrote %q to stdout; every failure path writes nothing there", c.label, stdout)
 		}
+	}
+}
+
+func TestNewInPlacePreservesPlanningAndGit(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "acme")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	chdir(t, root)
+	for rel, content := range map[string]string{
+		"README.md": "# My plan\n", ".gitignore": "private/\n",
+		"LICENSE": "custom license\n", "planning.md": "milestones\n",
+	} {
+		if err := os.WriteFile(rel, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	git := func(args ...string) string {
+		t.Helper()
+		out, err := exec.Command("git", args...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+		return string(out)
+	}
+	git("init", "-q")
+	git("add", "planning.md")
+	stdout, stderr, code := run(t, "--module", "example.com/custom/acme")
+	if code != 0 || stderr != "" {
+		t.Fatalf("exit=%d stderr=%q", code, stderr)
+	}
+	if !strings.Contains(stdout, "instantiated acme at . (module example.com/custom/acme)") || !strings.Contains(stdout, "Review and commit the new files yourself") {
+		t.Errorf("in-place checklist = %q", stdout)
+	}
+	if after := git("diff", "--cached", "--name-only"); after != "planning.md\n" {
+		t.Errorf("staged files changed: %q", after)
+	}
+	if git("rev-list", "--all", "--count") != "0\n" {
+		t.Error("in-place new created a commit")
+	}
+	for rel, want := range map[string]string{
+		"README.md": "# My plan\n", ".gitignore": "private/\n",
+		"LICENSE": "custom license\n", "planning.md": "milestones\n",
+	} {
+		got, err := os.ReadFile(rel)
+		if err != nil || string(got) != want {
+			t.Errorf("%s = %q, %v; want %q", rel, got, err, want)
+		}
+	}
+	module, err := os.ReadFile("go.mod")
+	if err != nil || !strings.Contains(string(module), "module example.com/custom/acme") {
+		t.Errorf("generated go.mod = %q, %v", module, err)
+	}
+	if _, err := os.Stat("cmd/acme/main.go"); err != nil {
+		t.Errorf("generated command missing: %v", err)
+	}
+}
+
+func TestNewInPlaceRefusesCollisionsBeforeWriting(t *testing.T) {
+	for _, conflict := range []string{"go.mod", "cmd/acme/main.go", "assets"} {
+		t.Run(conflict, func(t *testing.T) {
+			root := filepath.Join(t.TempDir(), "acme")
+			if err := os.Mkdir(root, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			chdir(t, root)
+			if err := os.MkdirAll(filepath.Dir(conflict), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(conflict, []byte("keep"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			stdout, _, code := run(t)
+			if code != exitcode.Refusal || stdout != "" {
+				t.Errorf("exit=%d stdout=%q, want refusal with no stdout", code, stdout)
+			}
+			if _, err := os.Stat("go.sum"); !os.IsNotExist(err) {
+				t.Errorf("go.sum created before conflict refusal: %v", err)
+			}
+			if got, err := os.ReadFile(conflict); err != nil || string(got) != "keep" {
+				t.Errorf("conflict altered: %q %v", got, err)
+			}
+		})
+	}
+}
+
+func TestNewInPlaceRejectsNonToolDirectoryName(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "my-project")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	chdir(t, root)
+	_, _, code := run(t)
+	if code != exitcode.UserFail {
+		t.Errorf("exit=%d, want invalid name", code)
+	}
+	if _, err := os.Stat("go.mod"); !os.IsNotExist(err) {
+		t.Errorf("go.mod created for invalid name: %v", err)
 	}
 }
 
