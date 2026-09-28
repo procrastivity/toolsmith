@@ -82,6 +82,11 @@ already exists** (exit 3). Zero-argument `toolsmith new` can bootstrap a
 mostly-bare current directory in place, but it refuses a pre-existing
 `go.mod` or conflicting skeleton code and tooling paths. Those conflicts
 are common in a conversion: the tool being ported already has a repo.
+If the checkout basename differs from the intended CLI name, use
+`toolsmith new --name <tool>` inside it; `--name` cannot accompany a positional
+name or `--dir`. Names such as `docker-extras` are valid; Go/Nix identifiers
+omit the hyphen (`dockerextras`) and environment prefixes use underscores
+(`DOCKER_EXTRAS`).
 Point `--dir` at a directory that does
 not exist yet (a scratch path outside the target repo) and add
 `--no-git`, which skips the verb's own `git init` and first commit — you

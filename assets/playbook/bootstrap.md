@@ -34,12 +34,15 @@ shape: the binary owns manifest, install, and doctor from day one.
 toolsmith new <tool> --dir <path>
 ```
 
-For a mostly-bare project directory that already exists, `cd` into it
-and run `toolsmith new` without a name. The directory basename must be
-a valid tool name (lowercase letters and digits, starting with a letter).
-This preserves existing README.md, .gitignore and LICENSE; it refuses
-other skeleton file collisions before writing. No Git init, staging or
-commit happens in-place, so review the files and commit them yourself.
+For an existing mostly-bare checkout, run `toolsmith new` from inside it;
+use `toolsmith new --name <tool>` if its directory name is not the intended
+command (for example `LDS` → `lds`). Do not combine `--name` with a positional
+name or `--dir`. Public names may have single hyphens between lowercase
+alphanumeric segments: `docker-extras` keeps its hyphen in the executable,
+module default, config/share paths and harness projection; Go/Nix identifiers
+drop it (`dockerextras`) and environment prefixes use underscores
+(`DOCKER_EXTRAS`). In-place mode preserves existing planning files and Git
+state; reconcile preserved README.md, .gitignore and LICENSE yourself.
 
 Work the printed checklist. `nix build` fails once and prints the real
 `vendorHash`; paste it into `flake.nix`. Fill every `TODO(<tool>)`
