@@ -29,7 +29,7 @@ func TestDestPathTable(t *testing.T) {
 		{"cmd/toolnamex/main.go", "cmd/toolnamex/main.go"},
 	}
 	for _, c := range cases {
-		if got := destPath(c.in, "acme"); got != c.want {
+		if got := destPath(c.in, "acme", "acme"); got != c.want {
 			t.Errorf("destPath(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
@@ -41,7 +41,7 @@ func TestDestPathTable(t *testing.T) {
 // file. The default module hides the bug, because both orders produce the
 // same string there — so the test uses a custom one.
 func TestSubstituteOrderWithCustomModule(t *testing.T) {
-	p := params{name: "acme", module: "example.com/x/acme", upperName: "ACME"}
+	p := params{name: "acme", goName: "acme", module: "example.com/x/acme", upperName: "ACME"}
 	in := []byte("import \"github.com/procrastivity/toolname/internal/toolnameerr\"\nconst env = \"TOOLNAME_CONFIG\"\n")
 	want := "import \"example.com/x/acme/internal/acmeerr\"\nconst env = \"ACME_CONFIG\"\n"
 	if got := string(substitute(in, p)); got != want {
@@ -50,9 +50,18 @@ func TestSubstituteOrderWithCustomModule(t *testing.T) {
 }
 
 func TestSubstituteDefaultModule(t *testing.T) {
-	p := params{name: "acme", module: "github.com/procrastivity/acme", upperName: "ACME"}
+	p := params{name: "acme", goName: "acme", module: "github.com/procrastivity/acme", upperName: "ACME"}
 	in := []byte("github.com/procrastivity/toolname and bare toolname and TOOLNAME\n")
 	want := "github.com/procrastivity/acme and bare acme and ACME\n"
+	if got := string(substitute(in, p)); got != want {
+		t.Errorf("substitute() = %q, want %q", got, want)
+	}
+}
+
+func TestSubstituteDoesNotRewriteInsertedNames(t *testing.T) {
+	p := params{name: "toolname-err", goName: "toolnameerr", module: "example.com/toolname/pkg", upperName: "TOOLNAME_ERR"}
+	in := []byte("github.com/procrastivity/toolname/internal/toolnameerr toolpkg toolname TOOLNAME")
+	want := "example.com/toolname/pkg/internal/toolnameerrerr toolnameerr toolname-err TOOLNAME_ERR"
 	if got := string(substitute(in, p)); got != want {
 		t.Errorf("substitute() = %q, want %q", got, want)
 	}
@@ -74,7 +83,10 @@ func TestValidateOrderAndCodes(t *testing.T) {
 		{"empty name", "", "", "validation.missing-name"},
 		{"uppercase", "Acme", "", "validation.invalid-name"},
 		{"leading digit", "1acme", "", "validation.invalid-name"},
-		{"hyphen", "ac-me", "", "validation.invalid-name"},
+		{"leading hyphen", "-acme", "", "validation.invalid-name"},
+		{"trailing hyphen", "acme-", "", "validation.invalid-name"},
+		{"repeated hyphen", "ac--me", "", "validation.invalid-name"},
+		{"underscore", "ac_me", "", "validation.invalid-name"},
 		{"the placeholder itself", "toolname", "", "validation.placeholder-name"},
 		{"existing target", "acme", existing, "refusal.target-exists"},
 	}

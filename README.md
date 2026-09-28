@@ -63,16 +63,24 @@ make build             # bin/toolsmith
 
 bin/toolsmith new clast --dir ~/Code/clast-go
 cd ~/Code/clast && toolsmith new             # mostly-bare existing project, in place
+cd ~/Code/LDS && toolsmith new --name lds     # keep an uppercase or neutral checkout name
+bin/toolsmith new docker-extras --dir ~/Code/docker-extras
 bin/toolsmith check ~/Code/wip
 bin/toolsmith doc                       # list the contract, playbook and kit
 bin/toolsmith doc playbook/intake.md    # print one
 ```
 
-With no name, `new` uses the current directory's basename as the tool
-name (lowercase letters and digits, starting with a letter). It leaves
-existing `README.md`, `.gitignore`, and `LICENSE` untouched and refuses
-other skeleton path collisions before writing. It does not initialize Git,
-stage, or commit in this mode; review the generated files and reconcile
+With no positional name, `new` uses the current directory's basename as
+the tool name, unless `--name` overrides it in place. `--name` cannot be
+combined with a positional name or `--dir`; a positional name selects a fresh target.
+Names use lowercase ASCII letters and digits in hyphen-separated segments,
+starting with a letter (no leading, trailing or repeated hyphens). For
+`docker-extras`, the executable, module default, config/share paths and
+harness artifacts retain the hyphen; Go package and Nix binding identifiers
+use `dockerextras`, and environment variables use `DOCKER_EXTRAS`.
+In-place mode leaves existing `README.md`, `.gitignore`, and `LICENSE`
+untouched and refuses other skeleton path collisions before writing. It
+does not initialize Git, stage, or commit in this mode; review the generated files and reconcile
 the retained files yourself. For an existing implementation rather than
 a mostly-bare project, use `toolsmith doc playbook/migrate.md`.
 

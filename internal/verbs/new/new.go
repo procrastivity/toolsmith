@@ -55,6 +55,7 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 	var (
 		targetDir string
 		module    string
+		nameFlag  string
 		noGit     bool
 	)
 
@@ -62,13 +63,16 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 		Use:   "new [name]",
 		Short: "instantiate the chassis skeleton as a new tool",
 		Long: "instantiate the chassis skeleton as a new tool.\n\n" +
-			"<name> becomes the binary name, the Go package names, the environment-variable prefix, and the paths: lowercase letters and digits, starting with a letter. With no name, instantiate in the current mostly-bare directory, using its basename as the name. Existing README.md, .gitignore and LICENSE are preserved; other skeleton path conflicts are refused. In-place mode does not change Git history or the index.",
+			"Names use lowercase ASCII letters and digits in hyphen-separated segments, starting with a letter. The public name becomes the binary, module default, config and share directories, and harness name. Go and Nix identifiers omit hyphens; environment prefixes replace them with underscores (docker-extras → dockerextras, DOCKER_EXTRAS). With no positional name, instantiate in the current mostly-bare directory, using its basename or --name. Existing README.md, .gitignore and LICENSE are preserved; other skeleton path conflicts are refused. In-place mode does not change Git history or the index.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if err := cobra.RangeArgs(0, 1)(cmd, args); err != nil {
 				return err
 			}
 			if len(args) == 0 && cmd.Flags().Changed("dir") {
-				return fmt.Errorf("--dir requires <name>; run toolsmith new from the target directory instead")
+				return fmt.Errorf("--dir requires a positional <name>; --name is only for in-place mode")
+			}
+			if len(args) != 0 && cmd.Flags().Changed("name") {
+				return fmt.Errorf("--name cannot be combined with a positional <name>; use the positional name for a new target")
 			}
 			return nil
 		},
@@ -76,7 +80,7 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 			var p params
 			var err error
 			if len(args) == 0 {
-				p, err = validateInPlace(module)
+				p, err = validateInPlace(nameFlag, module)
 			} else {
 				p, err = validate(args[0], targetDir, module, noGit)
 			}
@@ -151,6 +155,7 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 	// what it actually is. Recorded as D5 in
 	// docs/binary/parity-divergences.md.
 	cmd.Flags().StringVar(&targetDir, "dir", "", "where to create the tool (default: ./<name>; omit <name> to use the current directory)")
+	cmd.Flags().StringVar(&nameFlag, "name", "", "tool name for in-place mode (default: current directory basename; cannot combine with <name> or --dir)")
 	cmd.Flags().StringVar(&module, "module", "", "Go module path (default: github.com/procrastivity/<name>)")
 	cmd.Flags().BoolVar(&noGit, "no-git", false, "skip git init and the first commit")
 

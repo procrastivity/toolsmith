@@ -21,7 +21,7 @@
         # and a second copy would go stale in silence.
         version = self.shortRev or self.dirtyShortRev or "dev";
 
-        toolsmith = pkgs.buildGoModule {
+        toolpkg = pkgs.buildGoModule {
           pname = "toolsmith";
           inherit version;
           src = ./.;
@@ -60,7 +60,7 @@
           };
         };
       in {
-        packages.default = toolsmith;
+        packages.default = toolpkg;
 
         devShells.default = pkgs.mkShell {
           name = "toolsmith";
@@ -86,7 +86,7 @@
       # Downstream flakes consume `pkgs.toolsmith` through this overlay;
       # keep it or their inputs break.
       overlays.default = final: prev: {
-        toolsmith = self.packages.${prev.system}.default;
+        "toolsmith" = self.packages.${prev.system}.default;
       };
     };
 }

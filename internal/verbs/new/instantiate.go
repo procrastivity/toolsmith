@@ -33,21 +33,17 @@ import (
 // them — and TestInstantiatedTree guards that they survive instantiation.
 const skeletonPrefix = "_skeleton"
 
-// placeholder spellings the skeleton uses, and nothing else (port spec
-// §4.2 step 6). modulePlaceholder is a superset of namePlaceholder — it
-// contains it as a substring — which is why the substitutions below are
-// ordered and must stay ordered.
+// Placeholder spellings the skeleton uses (port spec §4.2 step 6).
+// Longer spellings must precede their substrings in substitute's replacer.
 const (
 	modulePlaceholder = "github.com/procrastivity/toolname"
 	namePlaceholder   = "toolname"
 	envPlaceholder    = "TOOLNAME"
 )
 
-// namePattern is the oracle's name-shape check `^[a-z][a-z0-9]*$` (port
-// spec §4.2 step 2). The shape is load-bearing beyond taste: the name
-// becomes Go package names, and it is what makes the ASCII uppercase
-// mapping for the env prefix total (port spec §3.2).
-var namePattern = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
+// Hyphens separate public-name segments; derived Go identifiers omit them,
+// while environment prefixes replace them with underscores.
+var namePattern = regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
 
 // params is the validated parameter set, built once before any filesystem
 // mutation begins — the oracle validates everything (port spec §4.2
@@ -61,24 +57,26 @@ type params struct {
 	// its absolute form.
 	targetDir string
 	module    string
+	goName    string
 	upperName string
 	doGit     bool
 	inPlace   bool
 }
 
-// validateInPlace derives the tool name from the current directory. A
+// validateInPlace uses the explicit name or derives it from the directory. A
 // directory with a Go module is already a tool, not a mostly-bare project.
 // No git commands run in this mode: existing history and staged work belong
 // to the caller, and initialising a new repo would commit their planning files.
-func validateInPlace(module string) (params, error) {
+func validateInPlace(name, module string) (params, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return params{}, internalErr("finding current directory: %v", err)
 	}
-	name := filepath.Base(cwd)
-	if !namePattern.MatchString(name) || name == namePlaceholder {
-		return params{}, toolsmitherr.New("validation.invalid-name",
-			fmt.Sprintf("directory name %q must be lowercase letters and digits, starting with a letter (or use new <name> --dir <unused-path>)", name))
+	if name == "" {
+		name = filepath.Base(cwd)
+	}
+	if err := validateName(name); err != nil {
+		return params{}, err
 	}
 	if _, err := os.Lstat("go.mod"); err == nil {
 		return params{}, toolsmitherr.New("refusal.target-exists", "go.mod already exists; this is not a bare project")
@@ -88,7 +86,7 @@ func validateInPlace(module string) (params, error) {
 	if module == "" {
 		module = "github.com/procrastivity/" + name
 	}
-	return params{name: name, targetDir: ".", module: module, upperName: strings.ToUpper(name), inPlace: true}, nil
+	return params{name: name, targetDir: ".", module: module, goName: strings.ReplaceAll(name, "-", ""), upperName: strings.ToUpper(strings.ReplaceAll(name, "-", "_")), inPlace: true}, nil
 }
 
 // Only these non-code files are safe to retain instead of the skeleton's
@@ -109,7 +107,7 @@ func preflightInPlace(p params, skeleton fs.FS) error {
 		if rel == "." {
 			return nil
 		}
-		dest := filepath.Join(p.targetDir, filepath.FromSlash(destPath(rel, p.name)))
+		dest := filepath.Join(p.targetDir, filepath.FromSlash(destPath(rel, p.name, p.goName)))
 		info, err := os.Lstat(dest)
 		if os.IsNotExist(err) {
 			return nil
@@ -134,16 +132,8 @@ func preflightInPlace(p params, skeleton fs.FS) error {
 // who relies on the default --dir get the same refusal as one who passed
 // it explicitly.
 func validate(name, targetDir, module string, noGit bool) (params, error) {
-	if name == "" {
-		return params{}, toolsmitherr.New("validation.missing-name", "a tool name is required")
-	}
-	if !namePattern.MatchString(name) {
-		return params{}, toolsmitherr.New("validation.invalid-name",
-			fmt.Sprintf("name must be lowercase letters and digits, starting with a letter (it becomes Go package names): got %q", name))
-	}
-	if name == namePlaceholder {
-		return params{}, toolsmitherr.New("validation.placeholder-name",
-			fmt.Sprintf("%q is the placeholder itself; pick a real name", namePlaceholder))
+	if err := validateName(name); err != nil {
+		return params{}, err
 	}
 
 	if targetDir == "" {
@@ -170,12 +160,25 @@ func validate(name, targetDir, module string, noGit bool) (params, error) {
 		name:      name,
 		targetDir: targetDir,
 		module:    module,
-		// the oracle's `tr '[:lower:]' '[:upper:]'` (port spec §4.2
-		// step 3). Total for this input because namePattern already
-		// confined name to ASCII lowercase and digits (port spec §3.2).
-		upperName: strings.ToUpper(name),
+		goName:    strings.ReplaceAll(name, "-", ""),
+		upperName: strings.ToUpper(strings.ReplaceAll(name, "-", "_")),
 		doGit:     !noGit,
 	}, nil
+}
+
+func validateName(name string) error {
+	if name == "" {
+		return toolsmitherr.New("validation.missing-name", "a tool name is required")
+	}
+	if !namePattern.MatchString(name) {
+		return toolsmitherr.New("validation.invalid-name",
+			fmt.Sprintf("name must be lowercase ASCII letters and digits in hyphen-separated segments, starting with a letter: got %q", name))
+	}
+	if name == namePlaceholder {
+		return toolsmitherr.New("validation.placeholder-name",
+			fmt.Sprintf("%q is the placeholder itself; pick a real name", namePlaceholder))
+	}
+	return nil
 }
 
 // instantiate writes the skeleton out as p.name. It follows the oracle's
@@ -199,7 +202,7 @@ func instantiate(p params, skeleton fs.FS, embedded bool) error {
 			return internalErr("reading skeleton file %q: %v", rel, err)
 		}
 
-		dest := filepath.Join(p.targetDir, filepath.FromSlash(destPath(rel, p.name)))
+		dest := filepath.Join(p.targetDir, filepath.FromSlash(destPath(rel, p.name, p.goName)))
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			return internalErr("creating %q: %v", filepath.Dir(dest), err)
 		}
@@ -247,43 +250,36 @@ func instantiate(p params, skeleton fs.FS, embedded bool) error {
 // later shipped, say, assets/templates/toolname.md would be renamed by the
 // general rule and left alone by the oracle. The explicit table is what the
 // oracle does, so the explicit table is what this is.
-func destPath(rel, name string) string {
+func destPath(rel, name, goName string) string {
 	switch rel {
 	case "go.mod.tmpl":
 		return "go.mod"
 	case "go.sum.tmpl":
 		return "go.sum"
 	case "internal/toolnameerr/toolnameerr.go":
-		return path.Join("internal", name+"err", name+"err.go")
+		return path.Join("internal", goName+"err", goName+"err.go")
 	}
 	if rest, ok := strings.CutPrefix(rel, "cmd/toolname/"); ok {
 		return path.Join("cmd", name, rest)
 	}
 	if rest, ok := strings.CutPrefix(rel, "internal/toolnameerr/"); ok {
-		return path.Join("internal", name+"err", rest)
+		return path.Join("internal", goName+"err", rest)
 	}
 	return rel
 }
 
-// substitute applies the oracle's three ordered replacements
-// (port spec §4.2 step 6).
-//
-// The order is load-bearing, not cosmetic. The module path contains the
-// bare placeholder as a substring, so running the bare replacement first
-// would leave the module replacement nothing to match — and for a custom
-// --module that strands github.com/procrastivity/<name> in every file
-// instead of the module the caller asked for.
-//
-// Byte-wise, matching the oracle's `LC_ALL=C sed`. Two differences from sed
-// are deliberate and both narrow the surface rather than widen it: the
-// oracle's pattern is a basic regular expression, so its unescaped dots
-// match any byte, and its replacement text gives & and \ their sed
-// meanings. Literal bytes are what the substitution is actually for, and no
-// module path or skeleton file reaches either corner.
+// substitute replaces the longest placeholders first, in one pass. A name
+// such as toolname-err may itself contain a placeholder spelling; a series
+// of ReplaceAll calls would corrupt the newly inserted identifier. Likewise
+// a custom module path must not be rewritten after insertion.
 func substitute(data []byte, p params) []byte {
-	out := bytes.ReplaceAll(data, []byte(modulePlaceholder), []byte(p.module))
-	out = bytes.ReplaceAll(out, []byte(namePlaceholder), []byte(p.name))
-	return bytes.ReplaceAll(out, []byte(envPlaceholder), []byte(p.upperName))
+	return []byte(strings.NewReplacer(
+		modulePlaceholder, p.module,
+		"toolnameerr", p.goName+"err",
+		"toolpkg", p.goName,
+		namePlaceholder, p.name,
+		envPlaceholder, p.upperName,
+	).Replace(string(data)))
 }
 
 // destMode decides the written file's permissions.

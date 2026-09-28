@@ -162,7 +162,10 @@ func TestExitCodes(t *testing.T) {
 		{"missing flag value", []string{"acme", "--dir"}, exitcode.Usage},
 		{"no name with dir", []string{"--dir", "taken"}, exitcode.Usage},
 		{"two positionals", []string{"a", "b"}, exitcode.Usage},
+		{"name and positional", []string{"acme", "--name", "other"}, exitcode.Usage},
+		{"name and dir", []string{"--name", "acme", "--dir", "taken"}, exitcode.Usage},
 		{"bad name shape", []string{"Acme"}, exitcode.UserFail},
+		{"invalid explicit name", []string{"--name", "a--b"}, exitcode.UserFail},
 		{"the placeholder name", []string{"toolname"}, exitcode.UserFail},
 		{"existing target", []string{"acme", "--dir", "taken"}, exitcode.Refusal},
 	}
@@ -261,7 +264,7 @@ func TestNewInPlaceRefusesCollisionsBeforeWriting(t *testing.T) {
 }
 
 func TestNewInPlaceRejectsNonToolDirectoryName(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "my-project")
+	root := filepath.Join(t.TempDir(), "My-Project")
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -272,6 +275,51 @@ func TestNewInPlaceRejectsNonToolDirectoryName(t *testing.T) {
 	}
 	if _, err := os.Stat("go.mod"); !os.IsNotExist(err) {
 		t.Errorf("go.mod created for invalid name: %v", err)
+	}
+}
+
+func TestNewInPlaceExplicitName(t *testing.T) {
+	for _, tc := range []struct{ dir, name string }{
+		{"LDS", "lds"}, {"repo", "docker-extras"},
+	} {
+		t.Run(tc.dir, func(t *testing.T) {
+			root := filepath.Join(t.TempDir(), tc.dir)
+			if err := os.Mkdir(root, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			chdir(t, root)
+			if err := os.WriteFile("README.md", []byte("planning\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			gitOutput(t, root, nil, "init", "-q")
+			gitOutput(t, root, nil, "add", "README.md")
+			gitOutput(t, root, nil, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "planning")
+			before := gitOutput(t, root, nil, "rev-parse", "HEAD")
+			if err := os.WriteFile("notes.md", []byte("next steps\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			gitOutput(t, root, nil, "add", "notes.md")
+			stdout, stderr, code := run(t, "--name", tc.name)
+			if code != 0 || stderr != "" || !strings.Contains(stdout, "instantiated "+tc.name+" at .") {
+				t.Fatalf("exit=%d stderr=%q stdout=%q", code, stderr, stdout)
+			}
+			if got, err := os.ReadFile("README.md"); err != nil || string(got) != "planning\n" {
+				t.Errorf("README changed: %q %v", got, err)
+			}
+			if got := gitOutput(t, root, nil, "diff", "--cached", "--name-only"); got != "notes.md\n" {
+				t.Errorf("staged changes altered: %q", got)
+			}
+			if got := gitOutput(t, root, nil, "rev-parse", "HEAD"); got != before {
+				t.Errorf("new changed HEAD from %q to %q", before, got)
+			}
+			module, err := os.ReadFile("go.mod")
+			if err != nil || !strings.Contains(string(module), "module github.com/procrastivity/"+tc.name+"\n") {
+				t.Errorf("generated module: %q %v", module, err)
+			}
+			if _, err := os.Stat(filepath.Join("cmd", tc.name, "main.go")); err != nil {
+				t.Error(err)
+			}
+		})
 	}
 }
 

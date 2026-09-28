@@ -21,7 +21,7 @@
         # and a second copy would go stale in silence.
         version = self.shortRev or self.dirtyShortRev or "dev";
 
-        toolname = pkgs.buildGoModule {
+        toolpkg = pkgs.buildGoModule {
           pname = "toolname";
           inherit version;
           src = ./.;
@@ -60,7 +60,7 @@
           };
         };
       in {
-        packages.default = toolname;
+        packages.default = toolpkg;
 
         devShells.default = pkgs.mkShell {
           name = "toolname";
@@ -86,7 +86,7 @@
       # Downstream flakes consume `pkgs.toolname` through this overlay;
       # keep it or their inputs break.
       overlays.default = final: prev: {
-        toolname = self.packages.${prev.system}.default;
+        "toolname" = self.packages.${prev.system}.default;
       };
     };
 }

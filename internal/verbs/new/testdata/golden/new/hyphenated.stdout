@@ -1,0 +1,18 @@
+instantiated docker-extras at docker-extras (module github.com/procrastivity/docker-extras)
+
+Checklist — the judgment steps the rename cannot do:
+  1. grep -rn 'TODO(docker-extras)' — fill every marker: root Short, README,
+     flake meta.description, the judgment and agent-guidance assets, the
+     skill description.
+  2. cd docker-extras && CGO_ENABLED=0 go build ./... && go test ./...
+     (should already pass; it did in the skeleton).
+  3. go mod vendor — commit vendor/ whenever a dependency changes;
+     flake.nix ships vendorHash = null, so there is no hash to paste.
+  4. make hooks — installs both pre-commit stages.
+  5. Decide the verb surface; register verbs in internal/cli/root.go,
+     one package each, every constructor ending in surface.Annotate.
+  6. For a migration (not a fresh tool): run toolsmith doc
+     playbook/migrate.md and follow it — port spec, parity gate, cutover.
+  7. Run toolsmith check docker-extras and clear any findings.
+  8. Add the tool to toolsmith's TOOLS.md.
+exit=0

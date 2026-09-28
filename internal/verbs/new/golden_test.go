@@ -250,25 +250,28 @@ func loadTree(t *testing.T, dir string) map[string]treeEntry {
 // principles against the shipped skeleton on disk, not a snapshot, so it
 // stays a real check on the production code rather than restating it.
 func destPathModel(rel, name string) string {
+	goName := strings.ReplaceAll(name, "-", "")
 	switch rel {
 	case "go.mod.tmpl":
 		return "go.mod"
 	case "go.sum.tmpl":
 		return "go.sum"
 	case "internal/toolnameerr/toolnameerr.go":
-		return path.Join("internal", name+"err", name+"err.go")
+		return path.Join("internal", goName+"err", goName+"err.go")
 	}
 	if rest, ok := strings.CutPrefix(rel, "cmd/toolname/"); ok {
 		return path.Join("cmd", name, rest)
 	}
 	if rest, ok := strings.CutPrefix(rel, "internal/toolnameerr/"); ok {
-		return path.Join("internal", name+"err", rest)
+		return path.Join("internal", goName+"err", rest)
 	}
 	return rel
 }
 
 func substituteModel(data []byte, module, name, upper string) []byte {
 	out := bytes.ReplaceAll(data, []byte("github.com/procrastivity/toolname"), []byte(module))
+	out = bytes.ReplaceAll(out, []byte("toolnameerr"), []byte(strings.ReplaceAll(name, "-", "")+"err"))
+	out = bytes.ReplaceAll(out, []byte("toolpkg"), []byte(strings.ReplaceAll(name, "-", "")))
 	out = bytes.ReplaceAll(out, []byte("toolname"), []byte(name))
 	return bytes.ReplaceAll(out, []byte("TOOLNAME"), []byte(upper))
 }
@@ -280,7 +283,7 @@ func substituteModel(data []byte, module, name, upper string) []byte {
 // load-bearing for this model too.
 func expectedTree(t *testing.T, skeletonDir, name, module string) map[string]treeEntry {
 	t.Helper()
-	upper := strings.ToUpper(name)
+	upper := strings.ToUpper(strings.ReplaceAll(name, "-", "_"))
 	out := map[string]treeEntry{}
 	err := filepath.WalkDir(skeletonDir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -457,6 +460,13 @@ var newCases = []newCase{
 		module: "github.com/procrastivity/gitdemo",
 		doGit:  true,
 	},
+	{
+		name:   "hyphenated",
+		tool:   "docker-extras",
+		args:   []string{"docker-extras", "--dir", "docker-extras", "--no-git"},
+		module: "github.com/procrastivity/docker-extras",
+		doGit:  false,
+	},
 }
 
 // TestGoldenNew instantiates each case three times, into three fresh
@@ -500,6 +510,23 @@ func TestGoldenNew(t *testing.T) {
 			goldenCompare(t, filepath.Join("new", tc.name+".stdout"), blobs[0])
 			compareTrees(t, expectedTree(t, skeletonDir, tc.tool, tc.module), trees[0])
 			assertAnchors(t, trees[0], tc.module)
+			if tc.name == "hyphenated" {
+				for p, want := range map[string]string{
+					"internal/harness/claudecode/claudecode.go": `SkillsDirEnv = "DOCKER_EXTRAS_CLAUDE_SKILLS_DIR"`,
+					"internal/asset/asset.go":                   `appName = "docker-extras"`,
+					"flake.nix":                                 `dockerextras = pkgs.buildGoModule`,
+				} {
+					if !bytes.Contains(trees[0][p].data, []byte(want)) {
+						t.Errorf("%s does not contain %q", p, want)
+					}
+				}
+				cmd := exec.Command("go", "test", "./...")
+				cmd.Dir = dirs[0]
+				cmd.Env = envs[0]
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Errorf("generated hyphenated tool does not compile and test: %v\n%s", err, out)
+				}
+			}
 
 			if tc.name == "custom-module" {
 				for p, e := range trees[0] {
