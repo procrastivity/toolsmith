@@ -291,6 +291,11 @@ Then:
 
 The last step of every conversion:
 
+Read `toolsmith doc playbook/reconcile.md` for the clause-by-clause review,
+evidence, divergence dispositions, and the ordering required before updating
+`contractReconciledMinor`. This procedure also applies to existing tools
+outside a conversion.
+
 - run `toolsmith check <repo>` and clear the findings, or record
   why a finding stands;
 - re-read CONTRACT.md against what you actually built, and record each

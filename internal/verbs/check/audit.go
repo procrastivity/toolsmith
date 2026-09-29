@@ -380,7 +380,7 @@ func checkReconciliationMinor(raw []byte, parseErr error, m toolmanifest.Manifes
 			later = append(later, fmt.Sprintf("v1.%d (%s)", entry.Minor, entry.Clauses))
 		}
 	}
-	return []Finding{reconciliationFinding(fmt.Sprintf("manifest --json reconciliation is stale at v1.%d; current minor is v1.%d; later additions: %s", m.ContractReconciledMinor, current, strings.Join(later, "; ")))}
+	return []Finding{reconciliationFinding(fmt.Sprintf("manifest --json reconciliation is stale at v1.%d; current minor is v1.%d; later additions: %s; review manually with `toolsmith doc playbook/reconcile.md`", m.ContractReconciledMinor, current, strings.Join(later, "; ")))}
 }
 
 func reconciliationFinding(message string) Finding {

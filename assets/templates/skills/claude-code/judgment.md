@@ -15,6 +15,10 @@ Reach for it again once a tool exists, to keep its own harness
 projections honest: re-run it after upgrading, or to diagnose a stale
 or hand-edited install before deciding whether to force past it.
 
+When a tool needs a contract-minor review, start with
+`toolsmith doc playbook/reconcile.md`. A conversion still starts at
+`toolsmith doc playbook/intake.md`.
+
 Do not reach for it to make one-off edits inside a tool's generated
 harness projection — that projection is regenerated from the tool's own
 manifest, not from toolsmith.

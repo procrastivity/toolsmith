@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/procrastivity/toolsmith/internal/asset"
 	"github.com/procrastivity/toolsmith/internal/cliflags"
 	"github.com/procrastivity/toolsmith/internal/exitcode"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
@@ -86,7 +87,7 @@ func TestList_ContainsExpectedNames_ExcludesNonDocs(t *testing.T) {
 		t.Fatalf("exit=%d stderr=%q, want a clean run", code, stderr)
 	}
 	lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
-	want := map[string]bool{"CONTRACT.md": false, "playbook/intake.md": false, "handoff-kit/sidecar-README.md": false}
+	want := map[string]bool{"CONTRACT.md": false, "playbook/intake.md": false, "playbook/reconcile.md": false, "handoff-kit/sidecar-README.md": false}
 	for _, l := range lines {
 		if _, ok := want[l]; ok {
 			want[l] = true
@@ -154,6 +155,39 @@ func TestPrint_PlaybookFile_ByteEqual(t *testing.T) {
 	}
 	if stdout != string(want) {
 		t.Fatalf("printed playbook/intake.md differs from assets/playbook/intake.md")
+	}
+}
+
+func TestPrint_ReconciliationGuide_ByteEqual(t *testing.T) {
+	want, err := os.ReadFile(filepath.Join(repoRoot(t), "assets", "playbook", "reconcile.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, code := run(t, "playbook/reconcile.md")
+	if code != 0 || stderr != "" {
+		t.Fatalf("exit=%d stderr=%q, want a clean run", code, stderr)
+	}
+	if stdout != string(want) {
+		t.Fatalf("printed playbook/reconcile.md differs from assets/playbook/reconcile.md")
+	}
+}
+
+func TestReconciliationGuide_EmbeddedFallback(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	resolved, err := asset.Resolve("playbook/reconcile.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolved.Source != asset.SourceEmbedded {
+		t.Fatalf("resolved source = %s, want embedded fallback", resolved.Source)
+	}
+	want, err := os.ReadFile(filepath.Join(repoRoot(t), "assets", "playbook", "reconcile.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(resolved.Bytes(), want) {
+		t.Fatal("embedded reconciliation guide differs from the shipped asset")
 	}
 }
 

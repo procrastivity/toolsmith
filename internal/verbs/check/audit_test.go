@@ -288,6 +288,7 @@ func TestCheckManifestDoc_ReconciliationMinor(t *testing.T) {
 	}{
 		{"current is clean", base("5"), ""},
 		{"stale names every later history row", base("2"), "v1.3 (C8.1–C8.4 (T30, T31)); v1.4 (C8.5, C3.9 (T32)); v1.5 (C3.10 (T25))"},
+		{"stale points to manual reconciliation guide", base("2"), "toolsmith doc playbook/reconcile.md"},
 		{"missing is deterministic", `{"schemaVersion":1,"contract":"toolsmith/v1","manifest_digest":"sha256:abc"}`, "carries no contractReconciledMinor"},
 		{"zero is invalid", base("0"), "carries an invalid contractReconciledMinor"},
 		{"malformed is invalid", base(`"two"`), "carries an invalid contractReconciledMinor"},
