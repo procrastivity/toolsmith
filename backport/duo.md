@@ -342,3 +342,38 @@ activates and this entry expires.
 - `CGO_ENABLED=0` appears once in `ci.yml`. Conforms: C1.1's **[check]**
   scopes to the setting "anywhere in the file, not at every build it
   governs."
+
+---
+
+## Optional release installer convention (T37; adoption not yet asserted)
+
+If duo's owner elects to ship the convenience installer, port these
+pieces from toolsmith; this is not a C4.1/C6 obligation and does not mean
+duo has already adopted or published them:
+
+- Copy/adapt `assets/_skeleton/scripts/install.sh` to `scripts/install.sh`;
+  first inspect duo's current `Makefile` and release workflow, then set
+  the binary/repository names, `DUO_*` variables and supported assets to
+  match duo's actually published platform matrix.
+- Port `assets/_skeleton/scripts/release_install_test.go` to
+  `scripts/release_install_test.go`; retain fake curl/uname, real fixture
+  SHA256SUMS, URL ordering, executable bytes, checksum refusal and cleanup.
+- Add ShellCheck wiring for `scripts/install.sh` to duo's Makefile lint
+  path; duo currently has neither `SHELLCHECK_FILES` nor a ShellCheck
+  lint command, so establish the wiring rather than appending to a
+  nonexistent variable.
+- In `.github/workflows/release.yml`, add a named copy step after the
+  builds for `dist/duo-install.sh`; generate `SHA256SUMS` from only the
+  audited published binaries and pass the installer explicitly to
+  `gh release create`. Keep the existing tag re-gate and release notes
+  flow; do not glob `dist/`.
+- Update `README.md` with the exact installer URL and a separate,
+  accurate projection example such as `duo install portable-launchers`.
+  Document latest/pinned, owner/base-URL override, `curl | sh` trust,
+  checksum scope and audited platform limits in the release/hygiene docs.
+- Verify with duo's existing `make check` and applicable tests. Add and
+  run a disposable fake-curl/fake-uname installer fixture against duo's
+  built binary and matching `SHA256SUMS`; assert duo's audited asset
+  names, checksum refusal, and install behavior. Inspect release copy and
+  explicit asset naming against README/checksums; do not assume duo has
+  toolsmith's `new` verb, skeleton, or drift package.

@@ -67,6 +67,39 @@ publishing fewer files.
 `SHA256SUMS` rides along so a binary fetched with curl can be verified
 without trusting the transport.
 
+## The GitHub curl installer asset
+
+The skeleton's `scripts/install.sh` is a convenience bootstrap for the
+release binaries; it is not the harness projection command. After
+cross-compilation has created `dist/`, the release workflow copies the
+script to `dist/toolname-install.sh` in a named `installer` step and
+passes that path explicitly to `gh release create`. Keep the filename in
+the README and workflow identical. Do not glob `dist/`.
+
+`SHA256SUMS` is deliberately generated from **only**
+`toolname-darwin-arm64` and `toolname-linux-amd64`. The installer fetches
+the selected binary and `SHA256SUMS`, verifies the binary checksum, and
+only then installs it. The installer script itself is not in the checksum
+file: `curl | sh` executes the downloaded shell script, so users are
+trusting the GitHub release asset and HTTPS delivery before the script
+can verify the later binary download. Inspect the script/source and use
+the trusted release URL; the checksum protects the binary transfer, not
+the script bootstrap.
+
+By default the script requests the GitHub `releases/latest/download`
+assets. Set `<TOOL>_VERSION` to pin a release tag; set `<TOOL>_BASE_URL`
+to use a fork or another GitHub repository (the installer expects the
+same release asset layout). `<TOOL>_INSTALL_DIR` overrides the default
+`~/.local/bin`. The published asset matrix follows the builds:
+Linux amd64 (`toolname-linux-amd64`) and macOS arm64
+(`toolname-darwin-arm64`). Do not advertise or invent a Windows asset.
+
+The install script only installs the binary. Users separately run
+`toolname install [<harness>]` to project into detected harnesses or one
+selected harness. This installer is registered as a project convention
+(T37), not a new C6 release requirement: C4.1/C6.4 do not require every
+tool or existing repository to ship a curl installer.
+
 ## CI never publishes
 
 `ci.yml` runs lint, test, `nix build`, and the cross-compile matrix,
