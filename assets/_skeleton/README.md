@@ -9,7 +9,15 @@ that projects itself into agent harnesses as generated, stamped skills.
 ## Install
 
 ```
-nix profile install github:OWNER/toolname   # the binary, system-wide
+curl -fsSL https://github.com/OWNER/toolname/releases/latest/download/toolname-install.sh | sh
+nix profile install github:OWNER/toolname   # alternative: install the binary with Nix
+```
+
+The installer puts the `toolname` binary in `~/.local/bin` by default.
+Installing the binary is separate from projecting its skills into a
+harness; once the binary is on `PATH`, run:
+
+```
 toolname install                            # project into every detected harness
 ```
 

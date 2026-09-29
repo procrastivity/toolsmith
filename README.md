@@ -26,6 +26,32 @@ by decision.
 The full normative text is [CONTRACT.md](CONTRACT.md), with numbered
 clauses the conformance checker and tool code comments cite.
 
+## Install
+
+Install the binary with the release installer:
+
+```sh
+curl -fsSL https://github.com/procrastivity/toolsmith/releases/latest/download/toolsmith-install.sh | sh
+```
+
+It installs `toolsmith` to `~/.local/bin` by default; ensure that directory
+is on `PATH`. Set `TOOLSMITH_VERSION` in the environment to pin a release
+tag instead of using the latest release. Currently supported binaries are
+Linux amd64 and macOS arm64.
+
+This command installs only the binary. Once it is on `PATH`, project its
+skills into detected harnesses, or target one harness, separately:
+
+```sh
+toolsmith install
+toolsmith install <harness>
+```
+
+`curl | sh` executes the fetched installer before any checksum check. The
+installer verifies the selected binary against `SHA256SUMS` fetched from
+the same release before writing the destination; this does not authenticate
+the installer script or guarantee a benign origin.
+
 ## Two entry modes
 
 - **Migrating something that exists** — a Claude skill, a plugin, a

@@ -9,8 +9,9 @@ import (
 
 	"github.com/procrastivity/toolname/internal/exitcode"
 	"github.com/procrastivity/toolname/internal/iostreams"
-	"github.com/procrastivity/toolname/internal/toolnameerr"
 )
+
+import "github.com/procrastivity/toolname/internal/toolnameerr"
 
 // Execute runs root and returns the process exit code, per the contract's
 // exit-code table (C2.4). It distinguishes a Cobra argument-parsing error

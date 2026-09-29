@@ -520,6 +520,43 @@ func TestGoldenNew(t *testing.T) {
 						t.Errorf("%s does not contain %q", p, want)
 					}
 				}
+				installer, ok := trees[0]["scripts/install.sh"]
+				if !ok {
+					t.Fatal("generated scripts/install.sh is missing")
+				}
+				if !installer.exec {
+					t.Error("generated scripts/install.sh is not executable")
+				}
+				for _, want := range []string{
+					"DOCKER_EXTRAS_VERSION",
+					"DOCKER_EXTRAS_INSTALL_DIR",
+					"DOCKER_EXTRAS_BASE_URL",
+					"https://github.com/procrastivity/docker-extras",
+				} {
+					if !bytes.Contains(installer.data, []byte(want)) {
+						t.Errorf("generated installer does not contain %q", want)
+					}
+				}
+				if bytes.Contains(installer.data, []byte("TOOLNAME")) {
+					t.Error("generated installer still contains TOOLNAME placeholder")
+				}
+				release, ok := trees[0][".github/workflows/release.yml"]
+				if !ok {
+					t.Fatal("generated .github/workflows/release.yml is missing")
+				}
+				copyStep, publishedAsset := releaseInstallerAnchors(string(release.data))
+				if !copyStep {
+					t.Error("generated installer step does not copy scripts/install.sh to dist/docker-extras-install.sh")
+				}
+				if !publishedAsset {
+					t.Error("generated publish step does not pass dist/docker-extras-install.sh to gh release create")
+				}
+				if bytes.Contains(release.data, []byte("TOOLNAME")) {
+					t.Error("generated release workflow still contains TOOLNAME placeholder")
+				}
+				if _, ok := trees[0]["scripts/release_install_test.go"]; !ok {
+					t.Error("generated scripts/release_install_test.go is missing")
+				}
 				cmd := exec.Command("go", "test", "./...")
 				cmd.Dir = dirs[0]
 				cmd.Env = envs[0]
@@ -617,5 +654,55 @@ func TestGoldenNewStaleFiles(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(dir, n+".stdout")); err != nil {
 			t.Errorf("case %q has no golden %s.stdout", n, n)
 		}
+	}
+}
+
+func releaseInstallerAnchors(workflow string) (copyStep, publishedAsset bool) {
+	const stepHeader = "      - name: installer\n"
+	installerStart := strings.Index(workflow, stepHeader)
+	if installerStart >= 0 {
+		installerBody := workflow[installerStart+len(stepHeader):]
+		if nextStep := strings.Index(installerBody, "\n      - name:"); nextStep >= 0 {
+			installerBody = installerBody[:nextStep]
+		}
+		copyStep = strings.Contains(installerBody, "        run: cp scripts/install.sh dist/docker-extras-install.sh\n")
+	}
+
+	const publishHeader = "      - name: publish\n"
+	publishStart := strings.Index(workflow, publishHeader)
+	if publishStart < 0 {
+		return copyStep, false
+	}
+	publishBody := workflow[publishStart+len(publishHeader):]
+	runStart := strings.Index(publishBody, "        run: |\n")
+	if runStart < 0 {
+		return copyStep, false
+	}
+	runBody := publishBody[runStart+len("        run: |\n"):]
+	create := strings.Index(runBody, "          gh release create ")
+	asset := strings.Index(runBody, "\n            dist/docker-extras-install.sh \\\n")
+	publishedAsset = create >= 0 && asset > create
+	return copyStep, publishedAsset
+}
+
+func TestReleaseInstallerWorkflowAnchors(t *testing.T) {
+	path := filepath.Join(repoRootDir(), "assets", "_skeleton", ".github", "workflows", "release.yml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflow := string(substituteModel(data, "github.com/procrastivity/docker-extras", "docker-extras", "DOCKER_EXTRAS"))
+	if copyStep, publishedAsset := releaseInstallerAnchors(workflow); !copyStep || !publishedAsset {
+		t.Fatalf("baseline anchors = copy %v, published %v; want both true", copyStep, publishedAsset)
+	}
+
+	withoutCopy := strings.Replace(workflow, "        run: cp scripts/install.sh dist/docker-extras-install.sh\n", "", 1)
+	if copyStep, publishedAsset := releaseInstallerAnchors(withoutCopy); copyStep || !publishedAsset {
+		t.Errorf("without installer copy = copy %v, published %v; want false, true", copyStep, publishedAsset)
+	}
+
+	withoutPublishedAsset := strings.Replace(workflow, "            dist/docker-extras-install.sh \\\n", "", 1)
+	if copyStep, publishedAsset := releaseInstallerAnchors(withoutPublishedAsset); !copyStep || publishedAsset {
+		t.Errorf("without published asset = copy %v, published %v; want true, false", copyStep, publishedAsset)
 	}
 }

@@ -7,8 +7,9 @@ import (
 
 	"github.com/procrastivity/toolsmith/internal/harness"
 	"github.com/procrastivity/toolsmith/internal/manifest"
-	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 )
+
+import "github.com/procrastivity/toolsmith/internal/toolsmitherr"
 
 // Install renders m's plumbing-verb subset into InstallDir() and stamps
 // the result with tool.version, schemaVersion, and a per-file checksum
