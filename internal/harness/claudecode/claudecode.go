@@ -25,8 +25,9 @@ import (
 	"github.com/procrastivity/toolsmith/internal/asset"
 	"github.com/procrastivity/toolsmith/internal/harness"
 	"github.com/procrastivity/toolsmith/internal/manifest"
-	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 )
+
+import "github.com/procrastivity/toolsmith/internal/toolsmitherr"
 
 // Name is this harness's install-target name, as passed to `toolsmith
 // install <harness>` / `toolsmith uninstall <harness>`.

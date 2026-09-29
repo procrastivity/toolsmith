@@ -7,8 +7,9 @@ import (
 
 	"github.com/procrastivity/toolname/internal/harness"
 	"github.com/procrastivity/toolname/internal/manifest"
-	"github.com/procrastivity/toolname/internal/toolnameerr"
 )
+
+import "github.com/procrastivity/toolname/internal/toolnameerr"
 
 // Install renders m's plumbing-verb subset into InstallDir() and stamps
 // the result with tool.version, schemaVersion, and a per-file checksum

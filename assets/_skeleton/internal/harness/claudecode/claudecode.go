@@ -25,8 +25,9 @@ import (
 	"github.com/procrastivity/toolname/internal/asset"
 	"github.com/procrastivity/toolname/internal/harness"
 	"github.com/procrastivity/toolname/internal/manifest"
-	"github.com/procrastivity/toolname/internal/toolnameerr"
 )
+
+import "github.com/procrastivity/toolname/internal/toolnameerr"
 
 // Name is this harness's install-target name, as passed to `toolname
 // install <harness>` / `toolname uninstall <harness>`.

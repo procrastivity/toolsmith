@@ -9,8 +9,9 @@ import (
 
 	"github.com/procrastivity/toolsmith/internal/exitcode"
 	"github.com/procrastivity/toolsmith/internal/iostreams"
-	"github.com/procrastivity/toolsmith/internal/toolsmitherr"
 )
+
+import "github.com/procrastivity/toolsmith/internal/toolsmitherr"
 
 // Execute runs root and returns the process exit code, per the contract's
 // exit-code table (C2.4). It distinguishes a Cobra argument-parsing error
