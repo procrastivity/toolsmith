@@ -33,6 +33,9 @@ jobs:
       - name: cross-compile
         run: nix develop --command make cross-compile
 
+      - name: installer
+        run: cp scripts/install.sh dist/toolsmith-install.sh
+
       - name: changelog
         run: |
           nix develop --command make changelog
@@ -55,5 +58,6 @@ jobs:
             --notes-file dist/RELEASE_NOTES.md \
             dist/toolsmith-darwin-arm64 \
             dist/toolsmith-linux-amd64 \
+            dist/toolsmith-install.sh \
             dist/SHA256SUMS \
             dist/CHANGELOG.md
