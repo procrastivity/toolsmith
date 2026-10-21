@@ -1,8 +1,7 @@
-// Package surface names the three manifest surface kinds every verb declares
-// on its registration (CONTRACT.md C3.2): plumbing, llm, control-plane. The
-// manifest walk reads this field directly off a command's registration — it
-// is the mechanical enforcement point for the porcelain/plumbing split,
-// never inferred from folder name or convention.
+// Package surface names the three manifest kinds every verb declares on its
+// registration (CONTRACT.md C3.2). A kind describes determinism/execution,
+// not audience or command-tree placement (C8.3); the manifest walk requires
+// the annotation and never infers it from a folder name or convention.
 package surface
 
 import "github.com/spf13/cobra"
@@ -11,8 +10,10 @@ import "github.com/spf13/cobra"
 type Kind string
 
 const (
-	// Plumbing verbs are deterministic: JSON + exit codes, no LLM. Only
-	// plumbing verbs project into a harness.
+	// Plumbing verbs have a deterministic output contract: stable JSON and
+	// exit codes, no LLM. This kind does not imply read-only behavior.
+	// Where a tool draws the C8.3 boundary, C4.3 projects only verbs that are
+	// both in the plumbing namespace and of plumbing kind.
 	Plumbing Kind = "plumbing"
 	// LLM verbs do CLI-side LLM shaping; no MCP. Absent from harness
 	// projections because inside a harness the model already is the LLM.

@@ -13,12 +13,43 @@ install steps — you are migrating, not bootstrapping. Start at
 ## 1. Name the verb surface before you name the tool
 
 Write the five or six commands you expect a user or an agent to type,
-with their output shape, before any code exists. Two questions decide
-most of the design:
+with their output shape, before any code exists. First decide whether
+the tool needs the C8.3 `plumbing` namespace. A tool that ships shapes
+must draw this boundary; shapes need deterministic document verbs
+under `plumbing`. A tool with no shapes and no verbs serving both
+audiences can keep a flat command tree — the boundary is not a
+requirement for every tool.
 
-- **Which verbs are `plumbing`?** Deterministic output, stable JSON,
-  stable exit codes, no LLM. Only these project into a harness (C4.3),
-  so this is also the answer to "what does the installed skill offer?"
+- **Which kind does each verb have?** C3.2's kind describes its
+  determinism/execution contract: `plumbing` means deterministic
+  output, stable JSON and exit codes, no LLM; `llm` means CLI-side LLM
+  shaping; `control-plane` means a live MCP surface. This is separate
+  from command-tree placement (the audience axis in C8.3). Deterministic
+  does not mean read-only: a plumbing verb may change state.
+- **Who needs each verb?** For a tool with the C8.3 boundary, ask:
+  does a human type it unprompted; does a skill or script call it for
+  its own operation; and, if both, is the deliverable the same?
+  Human-only verbs belong in the top-level porcelain tree; automation-
+  only verbs belong under `plumbing`. If both audiences need it and
+  the deliverable is the same, register an alias pair: one
+  implementation/constructor in both trees, with identical flags,
+  output, schema, and kind. Pin byte-identical stdout, stderr, and exit
+  code; help may differ only in the command path, and failure
+  diagnostics use the canonical plumbing spelling. The porcelain
+  manifest row carries `alias-of: "<canonical qualified name>"`
+  (C3.9), e.g. `"plumbing next"`; the canonical row and all other
+  verbs omit it. Each spelling remains a full leaf with independently
+  emitted and checked flags, usage, and schema.
+  If both audiences need it but the deliverable differs, register a
+  split pair: the top-level member is the finished, human-sized form;
+  the plumbing member is its deterministic substrate and keeps the full
+  audit contract. `--json` remains one contract and must be byte-
+  identical across the pair. Split pairs carry no `alias-of` metadata.
+  A pair is not an execution gate: both spellings execute. Where the
+  boundary stands, C4.3 projects exactly the verbs that are both in the
+  `plumbing` namespace and of `plumbing` kind; top-level-only verbs do
+  not project. If there is no C8.3 boundary, C4.3's namespace condition
+  does not apply.
 - **Does the tool own state?** Config and assets are not state (C5.3).
   Real state — a store, a log, per-project facts — is a design decision
   the contract does not make for you, and it belongs in the tool's own
