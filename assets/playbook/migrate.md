@@ -23,7 +23,7 @@ Two calls, both from intake, both written down:
   a branch you abandon; it is the thing the user reaches for until the
   new one is better.
 
-## Stage 1 — settle packaging before writing verbs
+## Stage 1 — settle packaging and placement before writing verbs
 
 Read CONTRACT.md end to end (`toolsmith doc CONTRACT.md`) and record the
 tool-specific answers it leaves open:
@@ -35,6 +35,55 @@ tool-specific answers it leaves open:
   materialized as real files (C4.9);
 - splice targets and lifecycle hooks, if intake found any (C4.8, C4.10);
 - state, if there is any that is neither config nor asset.
+
+Settle the existing flat verb surface now, before Stage 4 ports it. First
+decide whether this tool adopts the C8.3 `plumbing` boundary: a tool that
+ships shapes must draw it; for a shape-free existing tool, adoption is the
+owner's decision, not an automatic consequence of migration. If the
+boundary stands, answer for each verb: does a human type it unprompted;
+does a skill or script call it for its own operation; and, if both, is
+the deliverable the same? Keep human-only verbs at the top level, put
+automation-only verbs under `plumbing`, and do not demote a human verb
+just because its kind is `plumbing` (C3.2 and C8.3 describe different
+axes). When both audiences need it, use an alias pair for the same
+deliverable or a split pair for different deliverables (C8.5). Record
+the chosen qualified plumbing spellings in the sidecar and preserve them
+in skill/script call sites.
+
+For an **alias pair**, register one implementation through one
+constructor in both trees. Each spelling remains a full manifest leaf:
+check its flags, usage, schema, and kind independently. Only the
+porcelain row carries `alias-of: "plumbing <verb>"`; the canonical row
+does not (C3.9). Pin stdout, stderr, and exit-code equality under both
+spellings, allow help to differ only in its command path, and require
+failure diagnostics to name the canonical plumbing spelling (C8.5).
+
+For a **split pair**, make the top-level member the finished,
+human-sized deliverable and the plumbing member its deterministic
+substrate with the full audit contract. The human outputs should differ
+by design; `--json` remains one contract and must be byte-identical
+across both members. Neither manifest row carries `alias-of` (C3.9,
+C8.5). Check projection against C4.3's exact set: verbs that are both
+inside the `plumbing` namespace and of `plumbing` kind; an alias reaches
+the projection through its canonical member. Help listing and
+projection are not execution gates — both spellings of a pair execute.
+
+Use shipped implementations, not old design notes, as examples:
+
+- At wip's pinned [D112 adoption](https://github.com/procrastivity/wip/commit/ccd9a7a41e1a546fed7977f4c3938cf0aff87db3), `wip next` aliases
+  `wip plumbing next`, while `wip status` is a split pair. A separate
+  [diagnostic fix](https://github.com/procrastivity/wip/commit/02072638f293c21211f3f0b3945b4279ebda9a6a) canonicalizes alias failure
+  diagnostics. Treat these as pinned default-path evidence, not a claim
+  about every current profile: wip's `ExperimentalWipdProfile` status
+  route is porcelain-only, so do not infer universal `--json` parity
+  from the earlier split-pair example.
+- The shipped [clast adoption](https://github.com/procrastivity/clast/commit/ecd33a828883a7e6148984ed9bc528fd9e485710) adds `whereami`,
+  `projects`, and `clones` aliases. Its pair test compares matching
+  manifest declarations and stdout/stderr/exit codes for seeded `--json`
+  invocations; it does not establish canonical failure diagnostics. Its
+  `Projectable` predicate filters by namespace prefix alone; the test has
+  no in-namespace non-plumbing-kind case to check C4.3's conjunction. Use
+  it as an adoption example, not proof of full conformance.
 
 These answers belong in the conversion's sidecar, not in your head — see
 `handoff-kit/`. A conversion that skips the sidecar re-derives its own
