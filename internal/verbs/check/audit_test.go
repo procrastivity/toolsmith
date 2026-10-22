@@ -223,7 +223,7 @@ func TestCheckManifestDoc(t *testing.T) {
 	}{
 		{
 			name: "conformant, compact JSON",
-			doc:  `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":5,"manifest_digest":"sha256:abc"}`,
+			doc:  `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":6,"manifest_digest":"sha256:abc"}`,
 			want: nil,
 		},
 		{
@@ -236,24 +236,24 @@ func TestCheckManifestDoc(t *testing.T) {
 			doc: `{
   "schemaVersion": 1,
   "contract": "toolsmith/v1",
-  "contractReconciledMinor": 5,
+  "contractReconciledMinor": 6,
   "manifest_digest": "sha256:abc"
 }`,
 			want: nil,
 		},
 		{
 			name: "missing schemaVersion (zero value)",
-			doc:  `{"contract":"toolsmith/v1","contractReconciledMinor":5,"manifest_digest":"sha256:abc"}`,
+			doc:  `{"contract":"toolsmith/v1","contractReconciledMinor":6,"manifest_digest":"sha256:abc"}`,
 			want: []Finding{{"C3.1", "manifest --json carries no schemaVersion"}},
 		},
 		{
 			name: "digest missing the sha256: prefix",
-			doc:  `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":5,"manifest_digest":"abc"}`,
+			doc:  `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":6,"manifest_digest":"abc"}`,
 			want: []Finding{{"C3.4", "manifest --json carries no manifest_digest"}},
 		},
 		{
 			name: "contract missing the toolsmith/ prefix",
-			doc:  `{"schemaVersion":1,"contract":"other/v1","contractReconciledMinor":5,"manifest_digest":"sha256:abc"}`,
+			doc:  `{"schemaVersion":1,"contract":"other/v1","contractReconciledMinor":6,"manifest_digest":"sha256:abc"}`,
 			want: []Finding{{"C3.6", "manifest --json declares no toolsmith contract version"}},
 		},
 		{
@@ -286,13 +286,13 @@ func TestCheckManifestDoc_ReconciliationMinor(t *testing.T) {
 		doc  string
 		want string
 	}{
-		{"current is clean", base("5"), ""},
-		{"stale names every later history row", base("2"), "v1.3 (C8.1–C8.4 (T30, T31)); v1.4 (C8.5, C3.9 (T32)); v1.5 (C3.10 (T25))"},
+		{"current is clean", base("6"), ""},
+		{"stale names every later history row", base("2"), "v1.3 (C8.1–C8.4 (T30, T31)); v1.4 (C8.5, C3.9 (T32)); v1.5 (C3.10 (T25)); v1.6 (C5.5 (T38))"},
 		{"stale points to manual reconciliation guide", base("2"), "toolsmith doc playbook/reconcile.md"},
 		{"missing is deterministic", `{"schemaVersion":1,"contract":"toolsmith/v1","manifest_digest":"sha256:abc"}`, "carries no contractReconciledMinor"},
 		{"zero is invalid", base("0"), "carries an invalid contractReconciledMinor"},
 		{"malformed is invalid", base(`"two"`), "carries an invalid contractReconciledMinor"},
-		{"future is invalid", base("6"), "records future contractReconciledMinor 6"},
+		{"future is invalid", base("7"), "records future contractReconciledMinor 7"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

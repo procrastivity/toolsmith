@@ -26,6 +26,26 @@ by decision.
 The full normative text is [CONTRACT.md](CONTRACT.md), with numbered
 clauses the conformance checker and tool code comments cite.
 
+## Optional project-local runtime assets
+
+The default asset chain remains XDG override → shipped share → embedded.
+For an opted-in runtime read, `--project-root PATH` selects one exact
+project root; it is never inferred from Git, the current directory, or an
+environment variable. For example, toolsmith can serve a local version of
+the already-shipped migration guide from
+`/work/acme/.toolsmith/assets/playbook/migrate.md`:
+
+```sh
+toolsmith --project-root /work/acme doc playbook/migrate.md
+(cd /work/acme/subdir && toolsmith --project-root .. doc playbook/migrate.md)
+```
+
+Only known shipped names can be replaced; a missing local file falls back
+through the normal chain, while an invalid or unsafe selected path refuses.
+`toolsmith doc` listing, `CONTRACT.md`, manifest, install, and doctor do not
+read the selected root. Other commands are affected only when their runtime
+reader explicitly opts in; see C5.5.
+
 ## Install
 
 Install the binary with the release installer:
