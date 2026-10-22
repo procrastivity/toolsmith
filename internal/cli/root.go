@@ -1,5 +1,5 @@
 // Package cli is the one registration point for every verb (C1.3): it
-// builds the root Cobra command, binds the two global flags once, and maps
+// builds the root Cobra command, binds its global flags once, and maps
 // whatever Execute returns to the process exit code. cmd/toolsmith/main.go
 // does nothing beyond calling into this package.
 package cli
@@ -20,7 +20,7 @@ import (
 	versionverb "github.com/procrastivity/toolsmith/internal/verbs/version"
 )
 
-// NewRootCommand builds the toolsmith root command with both global flags
+// NewRootCommand builds the toolsmith root command with its global flags
 // bound and every verb registered. It is the only place any verb package
 // gets imported — no ad hoc init() side effects live anywhere else (C1.3).
 func NewRootCommand(streams *iostreams.Streams, build buildinfo.Info) *cobra.Command {
@@ -41,7 +41,13 @@ func NewRootCommand(streams *iostreams.Streams, build buildinfo.Info) *cobra.Com
 			if err != nil {
 				return err
 			}
-			cmd.SetContext(cliflags.WithFlags(cmd.Context(), cliflags.Flags{JSON: jsonOut, Verbose: verbose}))
+			projectRoot, err := cmd.Flags().GetString("project-root")
+			if err != nil {
+				return err
+			}
+			cmd.SetContext(cliflags.WithFlags(cmd.Context(), cliflags.Flags{
+				JSON: jsonOut, Verbose: verbose, ProjectRoot: projectRoot,
+			}))
 			return nil
 		},
 	}
@@ -50,6 +56,7 @@ func NewRootCommand(streams *iostreams.Streams, build buildinfo.Info) *cobra.Com
 
 	root.PersistentFlags().Bool("json", false, "emit the success payload as one JSON value")
 	root.PersistentFlags().BoolP("verbose", "v", false, "extra diagnostic lines on stderr")
+	root.PersistentFlags().String("project-root", "", "select the project root for runtime asset reads")
 
 	root.AddCommand(versionverb.Command(streams, build))
 	root.AddCommand(manifestverb.Command(streams, build, root))

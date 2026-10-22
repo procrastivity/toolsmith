@@ -1,4 +1,4 @@
-# The toolsmith contract — v1.5
+# The toolsmith contract — v1.6
 
 **Status: normative.** This document is the cross-tool contract for
 procrastivity-style CLI tools. A tool that conforms declares
@@ -259,6 +259,24 @@ marked **[check]** are mechanically verifiable.
   lexicon) get their own embed package so a build tag can drop them
   (from ste9). Encumbered content may force a private repo and private
   releases; the contract does not assume publishable assets.
+- **C5.5** Project-local runtime assets are an optional capability; a
+  tool MAY implement them without changing C5.1. Its only selector is
+  explicit `--project-root PATH`, naming an exact root; a relative path
+  is relative to invocation cwd. A tool MUST NOT infer a root from cwd,
+  Git metadata, or environment. Only a runtime reader that opts in for
+  a known shipped asset name may read
+  `<root>/.<tool>/assets/<name>` before the C5.1 chain, in the order
+  project → XDG → share → embedded. Project files add no names and do
+  not merge a tree. Only a missing local file falls through; an invalid
+  root or name, a symlink below the canonical root, a nonregular file,
+  or a permission/other read error refuses. The root is canonicalized
+  and callers MUST trust it; this is not protection against concurrent
+  writers. Bytes pass unchanged to the consumer, which owns parsing.
+  The old resolver and no-flag path retain their C5.1 behavior. Project
+  files are read-only inputs, and edits apply on the next opted-in
+  runtime read without reinstalling a harness. Selection MUST NOT
+  affect catalogs/listing, config, `Tree`, manifests or their digests,
+  install/doctor/stamps, or embedded `CONTRACT.md`.
 
 ## C6 — Release and hygiene
 
@@ -420,6 +438,7 @@ would be invention.
 | v1.3 | C8.1–C8.4 (T30, T31) | Shapes and the audience surface: an LLM workflow is defined once, in a live-served flow asset, with a verb form and a skill form; every deterministic step it needs is reachable through plumbing; the `plumbing` namespace is the audience boundary, with shape names reused across it. Proven by the clast conversion (S8–S10). No existing tool ships a shape, and the namespace binds only tools that do, so all conform with no change. |
 | v1.4 | C8.5, C3.9 (T32) | Verb pairs and the `alias-of` manifest field: where the `plumbing` namespace stands, a verb may register in both trees — an alias pair for the same deliverable, a split pair for different ones — and the manifest links an alias pair's porcelain member to its canonical qualified name. C4.3's projectable set is clarified, not changed: the namespace's `plumbing`-kind members. Proven by wip (D112); the clause is permissive, so every tool conforms with no change — wip as shipped, clast's own pairs decided-not-built (SURFACE.md V24 amendment), duo and ste9 shipping no namespace. |
 | v1.5 | C3.10 (T25) | The manifest records the minor its latest human reconciliation read, and the checker reports missing, invalid, future, or stale readings with every intervening version and its added clauses. This is process currency, not semantic conformance. |
+| v1.6 | C5.5 (T38) | Optional, explicitly selected project-local reads for known shipped runtime assets, ahead of the unchanged default chain. Existing tools need not implement the capability; declarations, schema, and administrative/install behavior do not change. |
 
 A tool's declared string does not move with this table (T24) — see
 **Versioning** above.

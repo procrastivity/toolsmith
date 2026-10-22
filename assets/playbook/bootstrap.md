@@ -59,6 +59,37 @@ A tool whose verbs are all `llm` or `control-plane` still gets a binary
 (T3). It just projects an empty verb table, and that is a legitimate
 shape: the binary owns manifest, install, and doctor from day one.
 
+### Optional project-local runtime assets (C5.5)
+
+Use this only when a runtime reader should consume a repository-owned
+version of a known shipped asset. `--project-root PATH` selects an exact
+root (relative paths use invocation cwd); it does not discover a Git root
+or make every verb project-aware. For example, a new runtime command that
+previews the shipped Claude Code judgment template—not the harness
+generation/install code—can preserve the legacy resolver when the flag is
+absent and opt in explicitly when set:
+
+```go
+func resolveJudgmentPreview(cmd *cobra.Command) (asset.Resolved, error) {
+	const name = "templates/skills/claude-code/judgment.md"
+	root := cliflags.FromContext(cmd.Context()).ProjectRoot
+	if root == "" {
+		return asset.Resolve(name)
+	}
+	return asset.ResolveIn(root, name)
+}
+```
+
+Only a missing local file falls through to XDG → shipped share → embedded;
+an invalid root or name, symlink below the canonical root, nonregular file,
+or permission/read error refuses. The caller must trust the selected
+directory; this is not protection against concurrent writers. Returned
+bytes are unchanged, so parsing and validation remain in the consuming
+verb. Do not route config, `Tree`, manifest, harness generation/install,
+doctor, stamps, or `CONTRACT.md` through this selection. Project files are
+read-only to the tool, and editing one does not require reinstalling a
+harness. The contract and version rationale are in C5.5 and T38.
+
 ## 2. Instantiate
 
 ```

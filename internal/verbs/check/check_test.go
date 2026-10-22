@@ -200,7 +200,7 @@ import (
 
 func main() {
 	if len(os.Args) >= 3 && os.Args[1] == "manifest" && os.Args[2] == "--json" {
-		fmt.Println(` + "`" + `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":5,"manifest_digest":"sha256:deadbeef"}` + "`" + `)
+		fmt.Println(` + "`" + `{"schemaVersion":1,"contract":"toolsmith/v1","contractReconciledMinor":6,"manifest_digest":"sha256:deadbeef"}` + "`" + `)
 	}
 }
 `

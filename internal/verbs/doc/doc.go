@@ -68,8 +68,8 @@ func Command(streams *iostreams.Streams) *cobra.Command {
 // named by its path relative to the served tree (no "assets/" prefix).
 // playbook/ and handoff-kit/ are enumerated from the default -> embedded
 // link of the asset chain only (asset.DefaultTree), never the user-override
-// link — an override shadows an existing name at content-resolution time
-// (show, via asset.Resolve) but never adds a new one to this list.
+// or project link — those shadow existing names at content-resolution time
+// but never add new ones to this list.
 func docNames() ([]string, error) {
 	names := []string{"CONTRACT.md"}
 	for _, prefix := range treePrefixes {
@@ -154,7 +154,7 @@ func show(streams *iostreams.Streams, flags cliflags.Flags, names []string, name
 		return toolsmitherr.New("not-found.doc", fmt.Sprintf("no doc named %q; run 'toolsmith doc' to list them", name))
 	}
 
-	data, source, diskPath, err := resolveDoc(name)
+	data, source, diskPath, err := resolveDoc(name, flags.ProjectRoot)
 	if err != nil {
 		return err
 	}
@@ -187,16 +187,23 @@ func show(streams *iostreams.Streams, flags cliflags.Flags, names []string, name
 // CONTRACT.md always comes from the root embed (contract.go) — never
 // through the override/default/embedded asset chain, per C5.1's own scope
 // (the contract is not tunable behavior) — so an override file named
-// CONTRACT.md is ignored. Every other doc name resolves through
-// asset.Resolve, which shadows by name (C5.2): an override at
-// $XDG_CONFIG_HOME/toolsmith/playbook/x.md replaces the shipped default at
-// that same name.
-func resolveDoc(name string) (data []byte, source asset.Source, diskPath string, err error) {
+// CONTRACT.md is ignored. Every other doc name resolves through asset.Resolve
+// by default; an explicit project root uses ResolveIn, which checks that
+// project's known shipped asset before continuing through the existing chain.
+func resolveDoc(name, projectRoot string) (data []byte, source asset.Source, diskPath string, err error) {
 	if name == "CONTRACT.md" {
 		return toolsmith.Contract(), asset.SourceEmbedded, "", nil
 	}
-	resolved, err := asset.Resolve(name)
+	var resolved asset.Resolved
+	if projectRoot == "" {
+		resolved, err = asset.Resolve(name)
+	} else {
+		resolved, err = asset.ResolveIn(projectRoot, name)
+	}
 	if err != nil {
+		if projectRoot != "" {
+			return nil, 0, "", toolsmitherr.New("refusal.project-asset", fmt.Sprintf("refusing selected project asset: %v", err))
+		}
 		return nil, 0, "", err
 	}
 	return resolved.Bytes(), resolved.Source, resolved.Path, nil

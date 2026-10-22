@@ -71,7 +71,13 @@ func hermeticEnv(t *testing.T, env []string) []string {
 
 func run(t *testing.T, env []string, args ...string) result {
 	t.Helper()
+	return runFrom(t, "", env, args...)
+}
+
+func runFrom(t *testing.T, dir string, env []string, args ...string) result {
+	t.Helper()
 	cmd := exec.Command(binPath, args...)
+	cmd.Dir = dir
 	cmd.Env = hermeticEnv(t, env)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

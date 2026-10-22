@@ -25,6 +25,27 @@ toolname install                            # project into every detected harnes
 <harness>` removes exactly what install wrote; `toolname doctor` reports
 stale or drifted projections.
 
+## Optional project-local runtime assets
+
+The root command accepts `--project-root PATH`, but that context does not
+make every verb read project files. Only a named runtime reader that opts
+in uses it, for known shipped names under
+`<root>/.<tool>/assets/<name>`; a missing file falls through to the normal
+asset chain, while invalid roots and unsafe or unreadable files refuse.
+The project directory is caller-trusted, and the check is not a sandbox
+against concurrent writers. Keep config, `Tree`, manifest, install,
+doctor, stamps, and embedded `CONTRACT.md` on their existing paths. See
+C5.5 in the toolsmith contract.
+
+For a command whose runtime reader opts in, select the root explicitly:
+
+```sh
+toolname --project-root /work/acme <runtime-command>
+```
+
+The generated chassis has no project-aware runtime reader by default; the
+placeholder command must be implemented to call `asset.ResolveIn`.
+
 ## Develop
 
 ```
