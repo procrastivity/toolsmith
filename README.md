@@ -97,6 +97,7 @@ the installer script or guarantee a benign origin.
 | [assets/_skeleton/](assets/_skeleton/) | A compiling Go module with `toolname` placeholders: the chassis, manifest, one worked harness target, release tooling, CI, hygiene. |
 | [cmd/toolsmith](cmd/toolsmith) | The binary: its `new` verb instantiates the skeleton, its `check` verb audits a repo against the contract's mechanical clauses. |
 | [backport/](backport/) | Punch lists of fixes flowing back into existing tools (wip first). |
+| [feedback/](feedback/) | The other direction: gaps a tool found in the contract, skeleton, playbook or checker, pending a fix or a decision here. |
 | [evidence/](evidence/) | Conformance runs and skeleton smoke-test records. |
 
 ## Using it
