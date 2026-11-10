@@ -102,6 +102,29 @@ refuses and never falls through, but the family says "not found".
 Options: C5.5 names the family, or the skeleton ships the code that
 toolsmith's `doc` uses.
 
+**12. The stale-artifact advisory names only the harness and the file
+(C4.6, C4.7).**
+(Added after items 8 to 11, so it keeps the next free number.)
+`staleFileFindings` in `assets/_skeleton/internal/checks/checks.go`
+builds the `advisory.stale-harness-artifact` message from the harness
+name and the file path only: "found: <harness> harness artifact <path>
+<reason> since last install; …". The skeleton's registry has one
+target per harness, so each line is unique. xmr splits each harness
+into five targets, one per skill, and the main file of every skill is
+`SKILL.md`. After an upgrade, `xmr doctor` printed five identical
+lines per harness, fifteen in all. The per-target state lines above
+them name the skill, but the findings do not. The `modified`,
+`unowned` and `incompatible` findings do not have this problem,
+because `harness.Risk` names the install dir. xmr's fix: put the
+target's label (the skill name) in the message, for example "found:
+claude-code xmr-review artifact SKILL.md changed since last install;
+…", with a test that installs two skills in one harness and expects
+two different findings, each with its skill name. Options: the
+skeleton gives `staleFileFindings` a target name now, or
+`assets/playbook/new-harness-target.md` says to add one when a harness gets
+more than one target. toolsmith's own `internal/checks/checks.go` has
+the same message.
+
 ---
 
 ## Contract
