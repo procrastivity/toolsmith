@@ -459,6 +459,7 @@ var rootPathExemptions = []pathExemption{
 	{prefix: "assets/playbook/", reason: "the migration playbook toolsmith ships; a generated tool ships no playbook"},
 	{prefix: "assets/handoff-kit/", reason: "the sidecar templates toolsmith ships; a generated tool ships none"},
 	{prefix: "backport/", reason: "punch lists for existing tools; toolsmith's own register"},
+	{prefix: "feedback/", reason: "upstream feedback from fleet tools back to toolsmith (TOOLS.md); toolsmith's own register"},
 	{prefix: "docs/binary/", reason: "the toolsmith-binary Matter's port spec and divergences (C7.2); a tool writes its own"},
 	{prefix: "docs/contract-v1-2-reconcile/", reason: "the contract-v1-2-reconcile Matter's decisions (C7.1); a tool writes its own"},
 	{prefix: "docs/lineage/", reason: "lineage records behind toolsmith's own T-decisions (C7.1's neighborhood); a tool writes its own"},
