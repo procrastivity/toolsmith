@@ -100,6 +100,53 @@ selected harness. This installer is registered as a project convention
 (T37), not a new C6 release requirement: C4.1/C6.4 do not require every
 tool or existing repository to ship a curl installer.
 
+## Nix installs the release binary from `stable`
+
+A flake input takes one fixed ref. Nix has no "newest `v*` tag" lookup,
+so a user who wants the latest release through Nix needs a ref that
+moves. That ref is the `stable` branch, and it must install the **same
+binary** the installer gets, not a rebuild of the source on the user's
+host.
+
+`stable` is therefore a generated branch, not a release commit. Each
+commit on it holds a `flake.nix` rendered from
+`contrib/stable-flake.nix.in`, its `flake.lock`, and a README. The flake
+uses `fetchurl` to get `toolname-linux-amd64` and
+`toolname-darwin-arm64` from the release, pinned by the hashes in that
+release's `SHA256SUMS`. `contrib/promote-stable vX.Y.Z` writes it, and
+`contrib/release` runs it with `--wait` after a release from `main`.
+
+The details are load-bearing:
+
+- **The flake is written after CI publishes.** A flake that fetches a
+  binary must carry the binary's hash, and the hash exists only after
+  the release workflow builds it. The tagged commit exists before that,
+  so the binary flake cannot live in it.
+- **Every asset is checked, not only the host's.** The script downloads
+  both binaries and hashes them against `SHA256SUMS` before it commits,
+  so a wrong darwin hash cannot ship from a Linux machine. It hashes with
+  `sha256sum`, not `nix store prefetch-file`: nix skips the download when
+  its store already holds a path with the expected hash.
+- **Each commit is a child of the previous one.** Every push is a plain
+  fast-forward; the script never forces, and it refuses a tag that is
+  not on `main` or not newer than the version `stable` names now.
+- **The stable tree has no CI config**, so pushing it starts no pipeline
+  on any forge.
+- **nixpkgs is pinned to the rev the release was built with**, read from
+  the tag's `flake.lock`.
+
+Rejected: a `stable` branch that is the release commit itself (the flake
+then builds from source on every install, the trap
+xes-harness-models-updater fell into first); a binary cache (a consumer
+that sets `inputs.nixpkgs.follows` evaluates a different derivation and
+misses the cache, then compiles anyway); a moving `latest` tag (git
+treats tags as fixed, and a clone that has the tag does not update it).
+
+`main` and the release tags keep the source flake, so
+`github:OWNER/toolname/vX.Y.Z` still builds from source, and the dev
+shell is unchanged. Protect `stable` on the forge: no force push, no
+deletion.
+
 ## CI never publishes
 
 `ci.yml` runs lint, test, `nix build`, and the cross-compile matrix,
@@ -171,6 +218,10 @@ make release-notes TAG=v0.1.0    # read what the release will say
 git tag -a v0.1.0 -m "v0.1.0"
 git push origin v0.1.0
 ```
+
+Then run `contrib/promote-stable v0.1.0` once the release workflow has
+published the binaries, to create the `stable` branch. After that,
+`contrib/release` moves `stable` on every release from `main`.
 
 Do this early — at v0.1.0, when nothing depends on it. A release process
 first exercised at v1.0 is a release process debugged in public.

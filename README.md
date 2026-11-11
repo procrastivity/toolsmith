@@ -72,6 +72,17 @@ installer verifies the selected binary against `SHA256SUMS` fetched from
 the same release before writing the destination; this does not authenticate
 the installer script or guarantee a benign origin.
 
+With Nix, install the same release binary from the `stable` branch:
+
+```sh
+nix profile install github:procrastivity/toolsmith/stable
+```
+
+`stable` holds a generated flake that installs the latest release's
+prebuilt binary, so Nix compiles nothing. Only `contrib/promote-stable`
+moves it, after a release from `main`. To build from source instead, use
+`github:procrastivity/toolsmith/vX.Y.Z`.
+
 ## Two entry modes
 
 - **Migrating something that exists** — a Claude skill, a plugin, a

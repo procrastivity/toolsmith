@@ -18,7 +18,9 @@
         # `nix build github:OWNER/toolname/v0.1.0` the rev is the tag
         # resolved — a stricter identifier, not a looser one. Do not "fix"
         # this with a VERSION file: the tag is the single source of truth,
-        # and a second copy would go stale in silence.
+        # and a second copy would go stale in silence. To install the
+        # tag-stamped release binary instead of building, use the generated
+        # `stable` branch (contrib/promote-stable).
         version = self.shortRev or self.dirtyShortRev or "dev";
 
         toolpkg = pkgs.buildGoModule {

@@ -10,8 +10,13 @@ that projects itself into agent harnesses as generated, stamped skills.
 
 ```
 curl -fsSL https://github.com/OWNER/toolname/releases/latest/download/toolname-install.sh | sh
-nix profile install github:OWNER/toolname   # alternative: install the binary with Nix
+nix profile install github:OWNER/toolname/stable   # alternative: the same binary, through Nix
 ```
+
+The `stable` branch holds a generated flake that installs the latest
+release's prebuilt binary (Linux amd64, macOS arm64), so Nix compiles
+nothing. Only `contrib/promote-stable` moves it, after a release from
+`main`. To build from source instead, use `github:OWNER/toolname/vX.Y.Z`.
 
 The installer puts the `toolname` binary in `~/.local/bin` by default.
 Installing the binary is separate from projecting its skills into a
