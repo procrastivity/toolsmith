@@ -100,7 +100,7 @@ selected harness. This installer is registered as a project convention
 (T37), not a new C6 release requirement: C4.1/C6.4 do not require every
 tool or existing repository to ship a curl installer.
 
-## Nix installs the release binary from `stable`
+## Nix installs the release binary from `stable` and `bin-vX.Y.Z`
 
 A flake input takes one fixed ref. Nix has no "newest `v*` tag" lookup,
 so a user who wants the latest release through Nix needs a ref that
@@ -108,27 +108,39 @@ moves. That ref is the `stable` branch, and it must install the **same
 binary** the installer gets, not a rebuild of the source on the user's
 host.
 
-`stable` is therefore a generated branch, not a release commit. Each
-commit on it holds a `flake.nix` rendered from
-`contrib/stable-flake.nix.in`, its `flake.lock`, and a README. The flake
-uses `fetchurl` to get `toolname-linux-amd64` and
+A user who pins one release needs the same thing, and the release tag
+cannot give it: the `vX.Y.Z` commit's own flake builds from source (see
+below for why).
+
+So each release gets a generated commit beside it, holding a `flake.nix`
+rendered from `contrib/stable-flake.nix.in`, its `flake.lock`, and a
+README. The flake uses `fetchurl` to get `toolname-linux-amd64` and
 `toolname-darwin-arm64` from the release, pinned by the hashes in that
-release's `SHA256SUMS`. `contrib/promote-stable vX.Y.Z` writes it, and
-`contrib/release` runs it with `--wait` after a release from `main`.
+release's `SHA256SUMS`. `contrib/promote-stable vX.Y.Z` writes it, tags it
+`bin-vX.Y.Z`, and makes it the next commit on the `stable` branch.
+`contrib/release` runs it with `--wait` after a release from `main`. For
+an older release, or one not made from `main`,
+`contrib/promote-stable --tag-only vX.Y.Z` writes only the tag.
 
 The details are load-bearing:
 
 - **The flake is written after CI publishes.** A flake that fetches a
   binary must carry the binary's hash, and the hash exists only after
   the release workflow builds it. The tagged commit exists before that,
-  so the binary flake cannot live in it.
+  and each binary embeds its commit, so the binary flake cannot live in
+  the tagged commit.
+- **`bin-` keeps the tags out of the release namespace.** `git describe
+  --match 'v[0-9]*'` cannot match them, and they sit on commits that
+  `main`'s history never reaches, so git-cliff never meets them. Each is
+  written once: the script refuses a `bin-` tag that origin already has.
 - **Every asset is checked, not only the host's.** The script downloads
   both binaries and hashes them against `SHA256SUMS` before it commits,
   so a wrong darwin hash cannot ship from a Linux machine. It hashes with
   `sha256sum`, not `nix store prefetch-file`: nix skips the download when
   its store already holds a path with the expected hash.
-- **Each commit is a child of the previous one.** Every push is a plain
-  fast-forward; the script never forces, and it refuses a tag that is
+- **Each `stable` commit is a child of the previous one.** Every push is
+  a plain fast-forward, pushed atomically with its `bin-` tag; the
+  script never forces, and it refuses to move `stable` to a tag that is
   not on `main` or not newer than the version `stable` names now.
 - **The stable tree has no CI config**, so pushing it starts no pipeline
   on any forge.
@@ -142,10 +154,10 @@ that sets `inputs.nixpkgs.follows` evaluates a different derivation and
 misses the cache, then compiles anyway); a moving `latest` tag (git
 treats tags as fixed, and a clone that has the tag does not update it).
 
-`main` and the release tags keep the source flake, so
-`github:OWNER/toolname/vX.Y.Z` still builds from source, and the dev
-shell is unchanged. Protect `stable` on the forge: no force push, no
-deletion.
+`main` and the `vX.Y.Z` tags keep the source flake, so they still build
+from source, and the dev shell is unchanged. Protect `stable` on the
+forge (no force push, no deletion) and the `bin-v*` tags (no update, no
+deletion).
 
 ## CI never publishes
 
@@ -220,7 +232,7 @@ git push origin v0.1.0
 ```
 
 Then run `contrib/promote-stable v0.1.0` once the release workflow has
-published the binaries, to create the `stable` branch. After that,
+published the binaries, to create the `stable` branch and `bin-v0.1.0`. After that,
 `contrib/release` moves `stable` on every release from `main`.
 
 Do this early — at v0.1.0, when nothing depends on it. A release process

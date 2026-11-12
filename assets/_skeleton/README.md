@@ -13,10 +13,12 @@ curl -fsSL https://github.com/OWNER/toolname/releases/latest/download/toolname-i
 nix profile install github:OWNER/toolname/stable   # alternative: the same binary, through Nix
 ```
 
-The `stable` branch holds a generated flake that installs the latest
-release's prebuilt binary (Linux amd64, macOS arm64), so Nix compiles
-nothing. Only `contrib/promote-stable` moves it, after a release from
-`main`. To build from source instead, use `github:OWNER/toolname/vX.Y.Z`.
+`stable` names the latest release. To pin one release, use its
+`bin-vX.Y.Z` tag: `nix profile install github:OWNER/toolname/bin-v1.2.3`.
+Both hold a generated flake that installs the release's prebuilt binary
+(Linux amd64, macOS arm64), so Nix compiles nothing.
+`contrib/promote-stable` writes them after each release. The `vX.Y.Z`
+tags and `main` build from source.
 
 The installer puts the `toolname` binary in `~/.local/bin` by default.
 Installing the binary is separate from projecting its skills into a

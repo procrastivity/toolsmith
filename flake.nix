@@ -20,7 +20,7 @@
         # this with a VERSION file: the tag is the single source of truth,
         # and a second copy would go stale in silence. To install the
         # tag-stamped release binary instead of building, use the generated
-        # `stable` branch (contrib/promote-stable).
+        # `bin-vX.Y.Z` tag or `stable` branch (contrib/promote-stable).
         version = self.shortRev or self.dirtyShortRev or "dev";
 
         toolpkg = pkgs.buildGoModule {

@@ -78,10 +78,12 @@ With Nix, install the same release binary from the `stable` branch:
 nix profile install github:procrastivity/toolsmith/stable
 ```
 
-`stable` holds a generated flake that installs the latest release's
-prebuilt binary, so Nix compiles nothing. Only `contrib/promote-stable`
-moves it, after a release from `main`. To build from source instead, use
-`github:procrastivity/toolsmith/vX.Y.Z`.
+`stable` names the latest release. To pin one release, use its
+`bin-vX.Y.Z` tag, for example
+`nix profile install github:procrastivity/toolsmith/bin-v0.0.3`. Both
+hold a generated flake that installs the release's prebuilt binary, so
+Nix compiles nothing. `contrib/promote-stable` writes them after each
+release. The `vX.Y.Z` tags and `main` build from source.
 
 ## Two entry modes
 
